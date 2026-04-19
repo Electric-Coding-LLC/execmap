@@ -2,6 +2,9 @@
 
 A lightweight planning system for mapping scoped work from start to finish.
 
+`execmap` `0.1` is a Bun-first CLI and skill bundle for planning bounded work
+before implementation starts.
+
 ## What It Is
 
 `execmap` is a simple way to plan bounded work before implementation starts.
@@ -96,27 +99,44 @@ execution maps.
 ## In This Repo
 
 - [docs/spec.md](./docs/spec.md): canonical system definition
+- [docs/releases/0.1.md](./docs/releases/0.1.md): `0.1` release scope and limits
 - [templates/EXECMAP.md](./templates/EXECMAP.md): top-level map template
 - [templates/STEP.md](./templates/STEP.md): step-doc template
 - [examples/portable-package-release/EXECMAP.md](./examples/portable-package-release/EXECMAP.md): example initiative
+- [skills/execmap/SKILL.md](./skills/execmap/SKILL.md): tracked Codex skill
 - `src/cli.ts`: minimal Bun CLI for scaffolding and validation
+
+## Install
+
+`execmap` is published as a Bun-first package. Use Bun `1.3+`.
+
+```bash
+bunx execmap init "portable package release"
+```
+
+For a persistent install:
+
+```bash
+bun install -g execmap
+execmap init "portable package release"
+```
 
 ## Quick Start
 
-1. Copy [`templates/EXECMAP.md`](./templates/EXECMAP.md) into a project.
-2. Map the full initiative in order before coding starts.
-3. Create step docs only for the items that need more definition.
-4. Execute from the map top to bottom.
+1. Run `execmap init "<initiative>"` to scaffold `plans/<initiative>/`.
+2. Fill in `EXECMAP.md` before implementation starts.
+3. Add step docs only for steps that need more definition.
+4. Execute from the first unchecked item.
 
 ## CLI
 
-This repo also ships a small CLI so the format is usable without manual
-copy-pasting.
+This repo ships a small CLI so the format is usable without manual
+copy-pasting. In a checkout, use `bun run src/cli.ts ...`. From an installed
+package, use `execmap ...`.
 
 ```bash
 bun install
-bun run typecheck
-bun test
+bun run check
 bun run src/cli.ts init "portable package release"
 bun run src/cli.ts next plans/portable-package-release
 bun run src/cli.ts check examples/portable-package-release
@@ -128,3 +148,14 @@ Commands:
 - `next`: print the next unchecked step from an execution map
 - `check`: validate required sections, step links, and step docs
 - `typecheck`: validate the Bun TypeScript CLI and tests with `tsc --noEmit`
+
+## Release Notes
+
+The `0.1` release is intentionally small:
+
+- the public CLI surface is `init`, `next`, and `check`
+- the tracked `skills/execmap/` bundle stays aligned with the CLI workflow
+- packaged-install verification is part of the release contract
+
+See [docs/releases/0.1.md](./docs/releases/0.1.md) for the shipped scope,
+verification path, and known limits.

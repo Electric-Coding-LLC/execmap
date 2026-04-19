@@ -76,7 +76,7 @@ scaffolding and validation.
 Common paths:
 
 - `execmap init ...`, `execmap next ...`, `execmap check ...` if installed as a
-  command
+  command or Bun package
 - `bun run src/cli.ts ...` in a repo that vendors the Bun helper
 
 Use the helper when it reduces manual work. Do not block on it.
