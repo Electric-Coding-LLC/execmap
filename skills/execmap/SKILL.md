@@ -21,8 +21,10 @@ Do not use `execmap` for trivial one-step edits.
 
 ## Core Model
 
+- The repo root has one `PLAN.md` that points to the active initiative.
 - Each initiative has one top-level `EXECMAP.md`.
-- `EXECMAP.md` is the source of truth for sequence and status.
+- `PLAN.md` is an index only. `EXECMAP.md` is the source of truth for sequence
+  and status.
 - Step docs are optional and exist only for steps that need more definition.
 - The next unchecked item in `Execution Map` is the default next action.
 
@@ -49,24 +51,30 @@ Required step-doc sections:
 - Default to `plans/<initiative-slug>/`.
 - Keep the initiative self-contained in that directory.
 
-3. Create the top-level map before implementation.
+3. Maintain the repo entrypoint.
+- Create or update a root `PLAN.md`.
+- Point it at the active `plans/<initiative>/EXECMAP.md`.
+- Keep `PLAN.md` as an index only. Do not duplicate checkbox state there.
+
+4. Create the top-level map before implementation.
 - Write the goal in one sentence.
 - Write guardrails that prevent scope drift.
 - Write the full ordered path from start to finish as a checkbox list.
 - Write outcome-focused `Done When` conditions.
 
-4. Create step docs only where needed.
+5. Create step docs only where needed.
 - Use numbered filenames that match execution order.
 - Link any step doc from the execution map item it supports.
 - Add a backlink from each step doc to `EXECMAP.md`.
 
-5. Execute from the map.
+6. Execute from the map.
 - Treat the first unchecked item as the current step.
 - Update `EXECMAP.md` before changing sequence or scope.
 - Mark a step complete only after its exit criteria are actually true.
 
-6. Keep status in one place.
+7. Keep status in one place.
 - Do not duplicate completion state in step docs.
+- Do not duplicate completion state in `PLAN.md`.
 
 ## Preferred Tooling
 
@@ -87,6 +95,7 @@ If no helper is available, create or update the markdown files directly.
 
 Minimum manual scaffold:
 
+- `PLAN.md`
 - `plans/<initiative>/EXECMAP.md`
 - optional numbered step docs such as `01-define-scope.md`
 
@@ -97,6 +106,8 @@ The workflow still applies even with no CLI.
 When introducing `execmap` into a repo or task:
 
 - Create the map instead of only describing it abstractly.
+- Create or update `PLAN.md` so the active map is discoverable from the repo
+  root.
 - If the user asked for execution, start from the first unchecked item after
   the map is in place.
 - If the map already exists, update it before implementing work that changes the
@@ -109,6 +120,7 @@ When introducing `execmap` into a repo or task:
 - Do not create execution maps for trivial edits.
 - Do not start implementation before the top-level path is mapped when the work
   is clearly non-trivial.
+- Do not leave the active initiative ambiguous from the repo root.
 - Do not let step docs become a second source of truth.
 - Do not mark steps complete based on intent; use observable exit criteria.
 - Keep plans compact and practical.

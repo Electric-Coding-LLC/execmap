@@ -9,8 +9,10 @@ before implementation starts.
 
 `execmap` is a simple way to plan bounded work before implementation starts.
 
-It is built around two ideas:
+It is built around three ideas:
 
+- the repo root has a small `PLAN.md` index that points to the active
+  initiative
 - every meaningful initiative gets one top-level execution map
 - each meaningful step can have a small step doc when it needs more thought
 
@@ -19,7 +21,14 @@ planning into overhead.
 
 ## Core Model
 
-Each initiative has one control document:
+The repo root has one entrypoint document:
+
+- `PLAN.md`
+
+That file points to the active initiative map. It is an index, not the place
+where step status is tracked.
+
+Each initiative then has one control document:
 
 - `EXECMAP.md`
 
@@ -31,7 +40,7 @@ That file defines:
 - the definition of done
 
 The execution path is a checkbox list. The next unchecked item is the default
-next step.
+next step once the active initiative is selected from `PLAN.md`.
 
 If a step needs real thought, risk management, or constraints, it gets its own
 small step doc.
@@ -78,6 +87,7 @@ A step doc uses four sections:
 ## Suggested Layout
 
 ```text
+PLAN.md
 plans/
   <initiative-name>/
     EXECMAP.md
@@ -91,15 +101,19 @@ execution maps.
 
 ## Authoring Conventions
 
+- Keep a root `PLAN.md` that points to the active `EXECMAP.md`.
 - Keep initiative folders self-contained.
 - Name step docs with a numeric prefix so the files match execution order.
 - If a step doc exists, link to it from the execution map.
 - Keep step status only in `EXECMAP.md`, not duplicated in step docs.
+- Keep `PLAN.md` as an index only; do not duplicate checkbox state there.
 
 ## In This Repo
 
 - [docs/spec.md](./docs/spec.md): canonical system definition
+- [docs/release.md](./docs/release.md): release and publication flow
 - [docs/releases/0.1.md](./docs/releases/0.1.md): `0.1` release scope and limits
+- [templates/PLAN.md](./templates/PLAN.md): root plan index template
 - [templates/EXECMAP.md](./templates/EXECMAP.md): top-level map template
 - [templates/STEP.md](./templates/STEP.md): step-doc template
 - [examples/portable-package-release/EXECMAP.md](./examples/portable-package-release/EXECMAP.md): example initiative
@@ -123,10 +137,11 @@ execmap init "portable package release"
 
 ## Quick Start
 
-1. Run `execmap init "<initiative>"` to scaffold `plans/<initiative>/`.
-2. Fill in `EXECMAP.md` before implementation starts.
-3. Add step docs only for steps that need more definition.
-4. Execute from the first unchecked item.
+1. Keep a root [`PLAN.md`](./PLAN.md) that points to the active initiative.
+2. Run `execmap init "<initiative>"` to scaffold `plans/<initiative>/`.
+3. Fill in `EXECMAP.md` before implementation starts.
+4. Add step docs only for steps that need more definition.
+5. Execute from the first unchecked item in the active map.
 
 ## CLI
 

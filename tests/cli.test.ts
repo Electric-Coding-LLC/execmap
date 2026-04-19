@@ -51,9 +51,42 @@ describe("execmap cli", () => {
     const result = await collectOutput(proc);
 
     expect(result.exitCode).toBe(0);
+    expect(await Bun.file(path.join(tmp, "PLAN.md")).exists()).toBe(true);
     expect(await Bun.file(path.join(tmp, "plans/alpha-launch/EXECMAP.md")).exists()).toBe(true);
     expect(await Bun.file(path.join(tmp, "plans/alpha-launch/01-define-scope.md")).exists()).toBe(true);
+    expect(await Bun.file(path.join(tmp, "PLAN.md")).text()).toContain("[Alpha Launch](./plans/alpha-launch/EXECMAP.md)");
     expect(result.stdout.trim()).toBe("plans/alpha-launch/EXECMAP.md");
+  });
+
+  test("next resolves active plan from repo root", async () => {
+    const tmp = await mkdtemp(path.join(os.tmpdir(), "execmap-"));
+    TEMP_DIRS.push(tmp);
+
+    const initProc = await runCli(["init", "Alpha Launch"], tmp);
+    const initResult = await collectOutput(initProc);
+    expect(initResult.exitCode).toBe(0);
+
+    const proc = await runCli(["next"], tmp);
+    const result = await collectOutput(proc);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout.trim()).toContain("Define scope -> ");
+    expect(result.stdout.trim()).toEndWith("/plans/alpha-launch/01-define-scope.md");
+  });
+
+  test("check resolves active plan from repo root", async () => {
+    const tmp = await mkdtemp(path.join(os.tmpdir(), "execmap-"));
+    TEMP_DIRS.push(tmp);
+
+    const initProc = await runCli(["init", "Alpha Launch"], tmp);
+    const initResult = await collectOutput(initProc);
+    expect(initResult.exitCode).toBe(0);
+
+    const proc = await runCli(["check"], tmp);
+    const result = await collectOutput(proc);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("OK: plans/alpha-launch/EXECMAP.md");
   });
 
   test("next reports completion for finished example", async () => {
