@@ -1,0 +1,4 @@
+interface:
+  display_name: "Execmap"
+  short_description: "Plan bounded work with execution maps"
+  default_prompt: "Use $execmap to map this non-trivial task before implementation and execute from the next unchecked step."
