@@ -34,8 +34,16 @@ type PlanEntry = {
   lineNo: number;
 };
 
-function slugify(value: string): string {
+function slugifyStep(value: string): string {
   const slug = value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return slug || "step";
+}
+
+function slugifyInitiative(value: string): string {
+  const slug = value
+    .toLowerCase()
+    .replace(/[^a-z0-9.]+/g, "-")
+    .replace(/^[.-]+|[.-]+$/g, "");
   return slug || "initiative";
 }
 
@@ -257,7 +265,7 @@ function renderExecmap(stepNames: string[]): string {
   ];
 
   for (const [index, stepName] of stepNames.entries()) {
-    const fileName = `./${String(index + 1).padStart(2, "0")}-${slugify(stepName)}.md`;
+    const fileName = `./${String(index + 1).padStart(2, "0")}-${slugifyStep(stepName)}.md`;
     lines.push(`- [ ] [${stepName}](${fileName})`);
   }
 
@@ -357,7 +365,7 @@ async function commandInit(args: string[]): Promise<number> {
   const stepNames = steps.length > 0 ? steps : DEFAULT_STEPS;
   const rootPath = path.resolve(root);
   const repoRoot = path.dirname(rootPath);
-  const planDir = path.resolve(rootPath, slugify(initiative));
+  const planDir = path.resolve(rootPath, slugifyInitiative(initiative));
 
   if (await exists(planDir)) {
     const entries = await readdir(planDir);
@@ -379,7 +387,10 @@ async function commandInit(args: string[]): Promise<number> {
   await writeFile(execmapPath, renderExecmap(stepNames), "utf8");
   await Promise.all(
     stepNames.map((stepName, index) => {
-      const stepPath = path.join(planDir, `${String(index + 1).padStart(2, "0")}-${slugify(stepName)}.md`);
+      const stepPath = path.join(
+        planDir,
+        `${String(index + 1).padStart(2, "0")}-${slugifyStep(stepName)}.md`,
+      );
       return writeFile(stepPath, renderStep(stepName), "utf8");
     }),
   );
