@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "execmap",
+      "name": "@electric_coding/execmap",
       "devDependencies": {
         "@types/bun": "^1.3.12",
         "typescript": "^6.0.3",
