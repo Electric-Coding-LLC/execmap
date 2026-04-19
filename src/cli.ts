@@ -5,6 +5,7 @@ import path from "node:path";
 
 const MAP_SECTIONS = ["Goal", "Guardrails", "Execution Map", "Done When"] as const;
 const STEP_SECTIONS = ["Goal", "Tasks", "Constraints", "Exit Criteria"] as const;
+const PLAN_SECTIONS = ["Active Plan", "Completed Plans"] as const;
 const DEFAULT_STEPS = [
   "Define scope",
   "Define key contracts or boundaries",
@@ -15,6 +16,7 @@ const DEFAULT_STEPS = [
 
 const HEADING_RE = /^## (?<title>.+)$/;
 const CHECKBOX_RE = /^- \[(?<mark>[ xX])\] (?<body>.+)$/;
+const LIST_ITEM_RE = /^- (?<body>.+)$/;
 const LINK_RE = /^\[(?<label>[^\]]+)\]\((?<href>[^)]+)\)$/;
 
 type SectionMap = Map<string, string[]>;
@@ -23,6 +25,12 @@ type StepItem = {
   checked: boolean;
   label: string;
   href: string | null;
+  lineNo: number;
+};
+
+type PlanEntry = {
+  label: string;
+  href: string;
   lineNo: number;
 };
 
@@ -128,12 +136,104 @@ async function readText(filePath: string): Promise<string> {
   }
 }
 
+function parsePlanEntries(lines: string[], startLine: number): PlanEntry[] {
+  const entries: PlanEntry[] = [];
+  for (const [offset, line] of lines.entries()) {
+    const match = line.match(LIST_ITEM_RE);
+    if (!match?.groups?.body) {
+      continue;
+    }
+    const body = match.groups.body.trim();
+    const linkMatch = body.match(LINK_RE);
+    if (!linkMatch?.groups?.label || !linkMatch.groups.href) {
+      continue;
+    }
+    entries.push({
+      label: linkMatch.groups.label,
+      href: linkMatch.groups.href,
+      lineNo: startLine + offset,
+    });
+  }
+  return entries;
+}
+
+function renderPlan(active: PlanEntry, completed: PlanEntry[]): string {
+  const completedLines =
+    completed.length > 0
+      ? completed.map((entry) => `- [${entry.label}](${entry.href})`)
+      : ["- None"];
+
+  return [
+    "# Plan Index",
+    "",
+    "This file points to the active initiative map for the repo. Status and",
+    "checkbox state live in the linked `EXECMAP.md`, not here.",
+    "",
+    "## Active Plan",
+    "",
+    `- [${active.label}](${active.href})`,
+    "",
+    "## Completed Plans",
+    "",
+    ...completedLines,
+    "",
+  ].join("\n");
+}
+
+async function readPlan(planPath: string): Promise<{ active: PlanEntry; completed: PlanEntry[] }> {
+  const text = await readText(planPath);
+  const { order, sections } = parseSections(text);
+  const errors = requireSections(planPath, order, sections, PLAN_SECTIONS);
+  if (errors.length > 0) {
+    throw new Error(errors[0] ?? `invalid plan index: ${planPath}`);
+  }
+
+  const activeEntries = parsePlanEntries(
+    sections.get("Active Plan") ?? [],
+    sectionStartLine(text, "Active Plan"),
+  );
+  if (activeEntries.length === 0) {
+    throw new Error(`${planPath}: active plan must link to an EXECMAP.md`);
+  }
+
+  const completed = parsePlanEntries(
+    sections.get("Completed Plans") ?? [],
+    sectionStartLine(text, "Completed Plans"),
+  );
+
+  return { active: activeEntries[0]!, completed };
+}
+
+async function resolveExecmapFromPlan(planPath: string): Promise<string> {
+  const { active } = await readPlan(planPath);
+  const execmapPath = path.resolve(path.dirname(planPath), active.href);
+  if (!(await exists(execmapPath))) {
+    throw new Error(`${planPath}:${active.lineNo}: active plan target does not exist: ${active.href}`);
+  }
+  return execmapPath;
+}
+
 async function findExecmap(target: string): Promise<string> {
   const targetPath = path.resolve(target);
   const targetStats = await stat(targetPath).catch(() => null);
   if (targetStats?.isDirectory()) {
-    return path.join(targetPath, "EXECMAP.md");
+    const execmapPath = path.join(targetPath, "EXECMAP.md");
+    if (await exists(execmapPath)) {
+      return execmapPath;
+    }
+
+    const planPath = path.join(targetPath, "PLAN.md");
+    if (await exists(planPath)) {
+      return resolveExecmapFromPlan(planPath);
+    }
+
+    return execmapPath;
   }
+
+  if (path.basename(targetPath) === "PLAN.md") {
+    return resolveExecmapFromPlan(targetPath);
+  }
+
   return targetPath;
 }
 
@@ -255,7 +355,9 @@ function parseInitArgs(args: string[]): { initiative: string; root: string; step
 async function commandInit(args: string[]): Promise<number> {
   const { initiative, root, steps, force } = parseInitArgs(args);
   const stepNames = steps.length > 0 ? steps : DEFAULT_STEPS;
-  const planDir = path.resolve(root, slugify(initiative));
+  const rootPath = path.resolve(root);
+  const repoRoot = path.dirname(rootPath);
+  const planDir = path.resolve(rootPath, slugify(initiative));
 
   if (await exists(planDir)) {
     const entries = await readdir(planDir);
@@ -270,6 +372,10 @@ async function commandInit(args: string[]): Promise<number> {
   }
 
   const execmapPath = path.join(planDir, "EXECMAP.md");
+  const execmapHref = `./${path.relative(repoRoot, execmapPath).replaceAll(path.sep, "/")}`;
+  const planIndexPath = path.join(repoRoot, "PLAN.md");
+  const existingCompleted = (await exists(planIndexPath)) ? (await readPlan(planIndexPath)).completed : [];
+
   await writeFile(execmapPath, renderExecmap(stepNames), "utf8");
   await Promise.all(
     stepNames.map((stepName, index) => {
@@ -277,13 +383,25 @@ async function commandInit(args: string[]): Promise<number> {
       return writeFile(stepPath, renderStep(stepName), "utf8");
     }),
   );
+  await writeFile(
+    planIndexPath,
+    renderPlan(
+      {
+        label: initiative,
+        href: execmapHref,
+        lineNo: 0,
+      },
+      existingCompleted,
+    ),
+    "utf8",
+  );
 
   console.log(path.relative(process.cwd(), execmapPath) || execmapPath);
   return 0;
 }
 
 async function commandNext(targetArg?: string): Promise<number> {
-  const execmapPath = await findExecmap(targetArg ?? "EXECMAP.md");
+  const execmapPath = await findExecmap(targetArg ?? ".");
   const text = await readText(execmapPath);
   const { sections } = parseSections(text);
   const executionLines = sections.get("Execution Map") ?? [];
@@ -306,7 +424,7 @@ async function commandNext(targetArg?: string): Promise<number> {
 }
 
 async function commandCheck(targetArg?: string): Promise<number> {
-  const execmapPath = await findExecmap(targetArg ?? "EXECMAP.md");
+  const execmapPath = await findExecmap(targetArg ?? ".");
   const text = await readText(execmapPath);
   const { order, sections } = parseSections(text);
   const errors = requireSections(execmapPath, order, sections, MAP_SECTIONS);
