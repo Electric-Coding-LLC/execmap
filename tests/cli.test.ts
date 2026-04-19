@@ -58,6 +58,19 @@ describe("execmap cli", () => {
     expect(result.stdout.trim()).toBe("plans/alpha-launch/EXECMAP.md");
   });
 
+  test("init preserves dotted release names for initiative folders", async () => {
+    const tmp = await mkdtemp(path.join(os.tmpdir(), "execmap-"));
+    TEMP_DIRS.push(tmp);
+
+    const proc = await runCli(["init", "v0.4"], tmp);
+    const result = await collectOutput(proc);
+
+    expect(result.exitCode).toBe(0);
+    expect(await Bun.file(path.join(tmp, "plans/v0.4/EXECMAP.md")).exists()).toBe(true);
+    expect(await Bun.file(path.join(tmp, "PLAN.md")).text()).toContain("[v0.4](./plans/v0.4/EXECMAP.md)");
+    expect(result.stdout.trim()).toBe("plans/v0.4/EXECMAP.md");
+  });
+
   test("next resolves active plan from repo root", async () => {
     const tmp = await mkdtemp(path.join(os.tmpdir(), "execmap-"));
     TEMP_DIRS.push(tmp);
