@@ -30,3 +30,6 @@ jobs:
 
       - name: Validate example
         run: bun run check:example
+
+      - name: Smoke packed install
+        run: bun run check:packed-install
