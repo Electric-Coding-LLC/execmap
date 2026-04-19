@@ -125,13 +125,13 @@ execution maps.
 `execmap` is published as a Bun-first package. Use Bun `1.3+`.
 
 ```bash
-bunx execmap init "portable package release"
+bunx @electric_coding/execmap init "portable package release"
 ```
 
 For a persistent install:
 
 ```bash
-bun install -g execmap
+bun install -g @electric_coding/execmap
 execmap init "portable package release"
 ```
 
@@ -171,6 +171,8 @@ The `0.1` release is intentionally small:
 - the public CLI surface is `init`, `next`, and `check`
 - the tracked `skills/execmap/` bundle stays aligned with the CLI workflow
 - packaged-install verification is part of the release contract
+- `bun run release -- <patch|minor|major|x.y.z>` is the release helper for
+  version bump, local release checks, commit, and tag creation
 
 See [docs/releases/0.1.md](./docs/releases/0.1.md) for the shipped scope,
 verification path, and known limits.

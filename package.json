@@ -1,5 +1,5 @@
 {
-  "name": "execmap",
+  "name": "@electric_coding/execmap",
   "version": "0.1.0",
   "description": "A lightweight planning system for bounded execution maps.",
   "type": "module",
@@ -39,6 +39,8 @@
   },
   "scripts": {
     "check": "bun run typecheck && bun test && bun run check:example && bun run check:packed-install",
+    "pack:dry-run": "npm pack --dry-run --ignore-scripts",
+    "release": "bun tools/release-package.ts",
     "typecheck": "tsc --noEmit",
     "check:example": "bun run src/cli.ts check examples/portable-package-release",
     "check:packed-install": "bun run tools/smoke-packed-install.ts",
