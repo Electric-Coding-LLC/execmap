@@ -1,0 +1,20 @@
+{
+  "name": "execmap",
+  "version": "0.1.0",
+  "description": "A lightweight planning system for bounded execution maps.",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "execmap": "./src/cli.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "check:example": "bun run src/cli.ts check examples/portable-package-release",
+    "next:example": "bun run src/cli.ts next examples/portable-package-release",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.12",
+    "typescript": "^6.0.3"
+  }
+}
