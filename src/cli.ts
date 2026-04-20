@@ -5,8 +5,10 @@ import path from "node:path";
 import {
   DEFAULT_STEPS,
   MAP_SECTIONS,
+  createPlanEntry,
   exists,
   findExecmap,
+  findPlan,
   parseExecutionItems,
   parseSections,
   readPlan,
@@ -15,6 +17,7 @@ import {
   renderPlan,
   renderStep,
   requireSections,
+  resolvePlanPath,
   sectionStartLine,
   setStepItemChecked,
   slugifyInitiative,
@@ -56,6 +59,30 @@ function parseInitArgs(args: string[]): { initiative: string; root: string; step
   }
 
   return { initiative, root, steps, force };
+}
+
+function parsePlanTargetArgs(
+  args: string[],
+  usage: string,
+): { positionals: string[]; plan: string } {
+  let plan = ".";
+  const positionals: string[] = [];
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === "--plan") {
+      index += 1;
+      const planTarget = args[index];
+      if (!planTarget) {
+        throw new Error(usage);
+      }
+      plan = planTarget;
+      continue;
+    }
+    positionals.push(arg);
+  }
+
+  return { positionals, plan };
 }
 
 async function commandInit(args: string[]): Promise<number> {
@@ -137,6 +164,35 @@ async function commandDone(targetArg?: string): Promise<number> {
   return 0;
 }
 
+async function commandActivate(args: string[]): Promise<number> {
+  const usage = "usage: execmap activate <target> [--plan <dir|PLAN.md>]";
+  const { positionals, plan } = parsePlanTargetArgs(args, usage);
+  const target = positionals[0];
+  if (!target) {
+    throw new Error(usage);
+  }
+
+  const planPath = await resolvePlanPath(plan);
+  const execmapPath = await findExecmap(target);
+  if (!(await exists(execmapPath))) {
+    console.error(`error: missing file: ${execmapPath}`);
+    return 1;
+  }
+
+  const planState = (await exists(planPath))
+    ? await readPlan(planPath)
+    : { active: null, completed: [] };
+  const nextActive = createPlanEntry(execmapPath, planPath);
+  const existingEntry = [planState.active, ...planState.completed].find(
+    (entry) => entry?.href === nextActive.href,
+  );
+  const active = existingEntry ? { ...nextActive, label: existingEntry.label } : nextActive;
+  const nextCompleted = planState.completed.filter((entry) => entry.href !== active.href);
+  await writeFile(planPath, renderPlan(active, nextCompleted), "utf8");
+  console.log(`Active: ${active.label}`);
+  return 0;
+}
+
 async function commandNext(targetArg?: string): Promise<number> {
   const execmapPath = await findExecmap(targetArg ?? ".");
   const text = await readText(execmapPath);
@@ -160,8 +216,38 @@ async function commandNext(targetArg?: string): Promise<number> {
   return 0;
 }
 
+async function commandClose(args: string[]): Promise<number> {
+  const usage = "usage: execmap close [--plan <dir|PLAN.md>]";
+  const { positionals, plan } = parsePlanTargetArgs(args, usage);
+  if (positionals.length > 0) {
+    throw new Error(usage);
+  }
+
+  const planPath = await resolvePlanPath(plan);
+  const { active, completed } = await readPlan(planPath);
+  if (!active) {
+    console.error(`error: ${planPath}: no active plan to close`);
+    return 1;
+  }
+
+  const nextCompleted = [active, ...completed.filter((entry) => entry.href !== active.href)];
+  await writeFile(planPath, renderPlan(null, nextCompleted), "utf8");
+  console.log(`Closed: ${active.label}`);
+  return 0;
+}
+
 async function commandCheck(targetArg?: string): Promise<number> {
-  const execmapPath = await findExecmap(targetArg ?? ".");
+  const target = targetArg ?? ".";
+  const planPath = await findPlan(target);
+  if (planPath) {
+    const { active } = await readPlan(planPath);
+    if (!active) {
+      console.log(`OK: ${path.relative(process.cwd(), planPath) || planPath} (no active plan)`);
+      return 0;
+    }
+  }
+
+  const execmapPath = await findExecmap(target);
   const text = await readText(execmapPath);
   const { order, sections } = parseSections(text);
   const errors = requireSections(execmapPath, order, sections, MAP_SECTIONS);
@@ -217,7 +303,7 @@ async function commandCheck(targetArg?: string): Promise<number> {
 }
 
 function printUsage(): void {
-  console.error("usage: execmap <init|next|done|check> [args]");
+  console.error("usage: execmap <init|next|done|activate|close|check> [args]");
 }
 
 export async function main(argv = process.argv.slice(2)): Promise<number> {
@@ -235,6 +321,12 @@ export async function main(argv = process.argv.slice(2)): Promise<number> {
   }
   if (command === "done") {
     return commandDone(rest[0]);
+  }
+  if (command === "activate") {
+    return commandActivate(rest);
+  }
+  if (command === "close") {
+    return commandClose(rest);
   }
   if (command === "check") {
     return commandCheck(rest[0]);

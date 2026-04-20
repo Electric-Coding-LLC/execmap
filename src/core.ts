@@ -32,6 +32,11 @@ export type PlanEntry = {
   lineNo: number;
 };
 
+export type PlanState = {
+  active: PlanEntry | null;
+  completed: PlanEntry[];
+};
+
 export function slugifyStep(value: string): string {
   const slug = value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   return slug || "step";
@@ -163,7 +168,32 @@ function parsePlanEntries(lines: string[], startLine: number): PlanEntry[] {
   return entries;
 }
 
-export function renderPlan(active: PlanEntry, completed: PlanEntry[]): string {
+function hasNoneListItem(lines: string[]): boolean {
+  return lines.some((line) => line.trim() === "- None");
+}
+
+function validatePlanSectionState(
+  filePath: string,
+  sectionName: string,
+  lines: string[],
+  entries: PlanEntry[],
+  options: { allowEmpty: boolean; allowMultipleLinks?: boolean },
+): string | null {
+  const hasNone = hasNoneListItem(lines);
+  if (entries.length > 1 && !options.allowMultipleLinks) {
+    return `${filePath}: ${sectionName.toLowerCase()} must contain at most one link entry`;
+  }
+  if (entries.length > 0 && hasNone) {
+    return `${filePath}: ${sectionName.toLowerCase()} cannot contain both a link and - None`;
+  }
+  if (entries.length === 0 && !hasNone && !options.allowEmpty) {
+    return `${filePath}: ${sectionName.toLowerCase()} must contain one link or - None`;
+  }
+  return null;
+}
+
+export function renderPlan(active: PlanEntry | null, completed: PlanEntry[]): string {
+  const activeLines = active ? [`- [${active.label}](${active.href})`] : ["- None"];
   const completedLines =
     completed.length > 0
       ? completed.map((entry) => `- [${entry.label}](${entry.href})`)
@@ -177,7 +207,7 @@ export function renderPlan(active: PlanEntry, completed: PlanEntry[]): string {
     "",
     "## Active Plan",
     "",
-    `- [${active.label}](${active.href})`,
+    ...activeLines,
     "",
     "## Completed Plans",
     "",
@@ -186,7 +216,7 @@ export function renderPlan(active: PlanEntry, completed: PlanEntry[]): string {
   ].join("\n");
 }
 
-export async function readPlan(planPath: string): Promise<{ active: PlanEntry; completed: PlanEntry[] }> {
+export async function readPlan(planPath: string): Promise<PlanState> {
   const text = await readText(planPath);
   const { order, sections } = parseSections(text);
   const errors = requireSections(planPath, order, sections, PLAN_SECTIONS);
@@ -194,29 +224,77 @@ export async function readPlan(planPath: string): Promise<{ active: PlanEntry; c
     throw new Error(errors[0] ?? `invalid plan index: ${planPath}`);
   }
 
+  const activeLines = sections.get("Active Plan") ?? [];
   const activeEntries = parsePlanEntries(
-    sections.get("Active Plan") ?? [],
+    activeLines,
     sectionStartLine(text, "Active Plan"),
   );
-  if (activeEntries.length === 0) {
-    throw new Error(`${planPath}: active plan must link to an EXECMAP.md`);
+  const activeError = validatePlanSectionState(planPath, "Active Plan", activeLines, activeEntries, {
+    allowEmpty: false,
+  });
+  if (activeError) {
+    throw new Error(activeError);
   }
 
+  const completedLines = sections.get("Completed Plans") ?? [];
   const completed = parsePlanEntries(
-    sections.get("Completed Plans") ?? [],
+    completedLines,
     sectionStartLine(text, "Completed Plans"),
   );
+  const completedError = validatePlanSectionState(
+    planPath,
+    "Completed Plans",
+    completedLines,
+    completed,
+    { allowEmpty: true, allowMultipleLinks: true },
+  );
+  if (completedError) {
+    throw new Error(completedError);
+  }
 
-  return { active: activeEntries[0]!, completed };
+  return { active: activeEntries[0] ?? null, completed };
 }
 
 export async function resolveExecmapFromPlan(planPath: string): Promise<string> {
   const { active } = await readPlan(planPath);
+  if (!active) {
+    throw new Error(`${planPath}: no active plan`);
+  }
   const execmapPath = path.resolve(path.dirname(planPath), active.href);
   if (!(await exists(execmapPath))) {
     throw new Error(`${planPath}:${active.lineNo}: active plan target does not exist: ${active.href}`);
   }
   return execmapPath;
+}
+
+export async function resolvePlanPath(target: string): Promise<string> {
+  const targetPath = path.resolve(target);
+  const targetStats = await stat(targetPath).catch(() => null);
+  if (targetStats?.isDirectory()) {
+    return path.join(targetPath, "PLAN.md");
+  }
+  if (path.basename(targetPath) === "PLAN.md") {
+    return targetPath;
+  }
+  throw new Error(`plan target must be a directory or PLAN.md: ${target}`);
+}
+
+export async function findPlan(target: string): Promise<string | null> {
+  const targetPath = path.resolve(target);
+  const targetStats = await stat(targetPath).catch(() => null);
+  if (targetStats?.isDirectory()) {
+    const planPath = path.join(targetPath, "PLAN.md");
+    return (await exists(planPath)) ? planPath : null;
+  }
+  return path.basename(targetPath) === "PLAN.md" ? targetPath : null;
+}
+
+export function createPlanEntry(execmapPath: string, planPath: string): PlanEntry {
+  return {
+    label: path.basename(path.dirname(execmapPath)),
+    href: `./${path.relative(path.dirname(planPath), execmapPath).replaceAll(path.sep, "/")}`,
+    lineNo: 0,
+  };
 }
 
 export async function findExecmap(target: string): Promise<string> {
