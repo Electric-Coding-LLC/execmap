@@ -5,6 +5,12 @@ All notable shipped changes to `@electric_coding/execmap` are recorded here.
 This file tracks published package history. Plans under `plans/*` track
 execution, not shipped versions.
 
+## 0.4.0 - 2026-04-20
+
+### Changed
+
+- ship 0.4 lean authoring flow (#9)
+
 ## 0.3.0 - 2026-04-20
 
 ### Changed
@@ -38,5 +44,6 @@ execution, not shipped versions.
 
 - Initial public release of the Bun-first `execmap` CLI.
 - Ship the `init`, `next`, and `check` workflow for bounded execution maps.
+
 
 
