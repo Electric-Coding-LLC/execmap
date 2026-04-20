@@ -5,6 +5,7 @@ import path from "node:path";
 import {
   DEFAULT_STEPS,
   MAP_SECTIONS,
+  type StepItem,
   createPlanEntry,
   exists,
   findExecmap,
@@ -20,6 +21,7 @@ import {
   resolvePlanPath,
   sectionStartLine,
   setStepItemChecked,
+  setStepItemLink,
   slugifyInitiative,
   slugifyStep,
   validateStepDoc,
@@ -85,6 +87,19 @@ function parsePlanTargetArgs(
   return { positionals, plan };
 }
 
+function selectStepItem(items: StepItem[], selector: string): StepItem | null {
+  if (/^\d+$/.test(selector)) {
+    const index = Number.parseInt(selector, 10);
+    return items.find((item) => item.position === index) ?? null;
+  }
+
+  const matches = items.filter((item) => item.label === selector);
+  if (matches.length > 1) {
+    throw new Error(`multiple execution-map items match: ${selector}`);
+  }
+  return matches[0] ?? null;
+}
+
 async function commandInit(args: string[]): Promise<number> {
   const { initiative, root, steps, force } = parseInitArgs(args);
   const stepNames = steps.length > 0 ? steps : DEFAULT_STEPS;
@@ -110,15 +125,6 @@ async function commandInit(args: string[]): Promise<number> {
   const existingCompleted = (await exists(planIndexPath)) ? (await readPlan(planIndexPath)).completed : [];
 
   await writeFile(execmapPath, renderExecmap(stepNames), "utf8");
-  await Promise.all(
-    stepNames.map((stepName, index) => {
-      const stepPath = path.join(
-        planDir,
-        `${String(index + 1).padStart(2, "0")}-${slugifyStep(stepName)}.md`,
-      );
-      return writeFile(stepPath, renderStep(stepName), "utf8");
-    }),
-  );
   await writeFile(
     planIndexPath,
     renderPlan(
@@ -133,6 +139,61 @@ async function commandInit(args: string[]): Promise<number> {
   );
 
   console.log(path.relative(process.cwd(), execmapPath) || execmapPath);
+  return 0;
+}
+
+async function commandStepdoc(args: string[]): Promise<number> {
+  const usage = "usage: execmap stepdoc <target> <step>";
+  const [target, selector] = args;
+  if (!target || !selector) {
+    throw new Error(usage);
+  }
+
+  const execmapPath = await findExecmap(target);
+  const text = await readText(execmapPath);
+  const { order, sections } = parseSections(text);
+  const errors = requireSections(execmapPath, order, sections, MAP_SECTIONS);
+  if (errors.length > 0) {
+    console.error(`error: ${errors[0]}`);
+    return 1;
+  }
+
+  const executionLines = sections.get("Execution Map") ?? [];
+  const items = parseExecutionItems(executionLines, sectionStartLine(text, "Execution Map"));
+  if (items.length === 0) {
+    console.error(`error: ${execmapPath}: execution map must contain at least one checkbox item`);
+    return 1;
+  }
+
+  let item: StepItem | null;
+  try {
+    item = selectStepItem(items, selector);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`error: ${message}`);
+    return 1;
+  }
+  if (!item) {
+    console.error(`error: ${execmapPath}: step not found: ${selector}`);
+    return 1;
+  }
+  if (item.href) {
+    console.error(`error: ${execmapPath}:${item.lineNo}: step already links to a step doc`);
+    return 1;
+  }
+
+  const stepFileName = `${String(item.position).padStart(2, "0")}-${slugifyStep(item.label)}.md`;
+  const stepPath = path.join(path.dirname(execmapPath), stepFileName);
+  if (await exists(stepPath)) {
+    console.error(`error: destination step doc already exists: ${stepPath}`);
+    return 1;
+  }
+
+  const stepHref = `./${stepFileName}`;
+  const nextExecmap = setStepItemLink(text, item, stepHref);
+  await writeFile(stepPath, renderStep(item.label), "utf8");
+  await writeFile(execmapPath, nextExecmap, "utf8");
+  console.log(`Step doc: ${path.relative(process.cwd(), stepPath) || stepPath}`);
   return 0;
 }
 
@@ -303,7 +364,7 @@ async function commandCheck(targetArg?: string): Promise<number> {
 }
 
 function printUsage(): void {
-  console.error("usage: execmap <init|next|done|activate|close|check> [args]");
+  console.error("usage: execmap <init|next|done|stepdoc|activate|close|check> [args]");
 }
 
 export async function main(argv = process.argv.slice(2)): Promise<number> {
@@ -321,6 +382,9 @@ export async function main(argv = process.argv.slice(2)): Promise<number> {
   }
   if (command === "done") {
     return commandDone(rest[0]);
+  }
+  if (command === "stepdoc") {
+    return commandStepdoc(rest);
   }
   if (command === "activate") {
     return commandActivate(rest);

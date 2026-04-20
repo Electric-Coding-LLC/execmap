@@ -91,9 +91,10 @@ Items that need more detail should link to step docs.
 Mark a checkbox complete only when the corresponding step exit criteria are
 actually satisfied.
 
-When helper tooling is available, it may support advancing the map directly.
-That helper must preserve `EXECMAP.md` as the source of truth rather than
-introducing a second state store.
+When helper tooling is available, it may support advancing the map directly or
+creating a linked step doc for a specific item on demand. That helper must
+preserve `EXECMAP.md` as the source of truth rather than introducing a second
+state store.
 
 ## Done When
 
