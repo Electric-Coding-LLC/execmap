@@ -25,7 +25,7 @@ and verification that matches the shipped artifact.
 - [x] [Lock the install and runtime contract](./02-lock-install-runtime-contract.md)
 - [x] [Prepare the public package and docs](./03-prepare-public-package-and-docs.md)
 - [x] [Verify the shipped install path](./04-verify-shipped-install-path.md)
-- [ ] [Publish and close the `0.1` release](./05-publish-and-close-release.md)
+- [x] [Publish and close the `0.1` release](./05-publish-and-close-release.md)
 
 ## Done When
 

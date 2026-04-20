@@ -87,6 +87,45 @@ describe("execmap cli", () => {
     expect(result.stdout.trim()).toEndWith("/plans/alpha-launch/01-define-scope.md");
   });
 
+  test("done resolves active plan from repo root", async () => {
+    const tmp = await mkdtemp(path.join(os.tmpdir(), "execmap-"));
+    TEMP_DIRS.push(tmp);
+
+    const initProc = await runCli(["init", "Alpha Launch"], tmp);
+    const initResult = await collectOutput(initProc);
+    expect(initResult.exitCode).toBe(0);
+
+    const proc = await runCli(["done"], tmp);
+    const result = await collectOutput(proc);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout.trim()).toBe("Done: Define scope");
+    expect(await Bun.file(path.join(tmp, "plans/alpha-launch/EXECMAP.md")).text()).toContain(
+      "- [x] [Define scope](./01-define-scope.md)",
+    );
+  });
+
+  test("done advances next", async () => {
+    const tmp = await mkdtemp(path.join(os.tmpdir(), "execmap-"));
+    TEMP_DIRS.push(tmp);
+
+    const initProc = await runCli(["init", "Alpha Launch"], tmp);
+    const initResult = await collectOutput(initProc);
+    expect(initResult.exitCode).toBe(0);
+
+    const doneProc = await runCli(["done"], tmp);
+    const doneResult = await collectOutput(doneProc);
+    expect(doneResult.exitCode).toBe(0);
+
+    const nextProc = await runCli(["next"], tmp);
+    const nextResult = await collectOutput(nextProc);
+    expect(nextResult.exitCode).toBe(0);
+    expect(nextResult.stdout.trim()).toContain("Define key contracts or boundaries -> ");
+    expect(nextResult.stdout.trim()).toEndWith(
+      "/plans/alpha-launch/02-define-key-contracts-or-boundaries.md",
+    );
+  });
+
   test("check resolves active plan from repo root", async () => {
     const tmp = await mkdtemp(path.join(os.tmpdir(), "execmap-"));
     TEMP_DIRS.push(tmp);
@@ -108,6 +147,16 @@ describe("execmap cli", () => {
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout.trim()).toBe("All steps are complete.");
+  });
+
+  test("done fails when all steps are complete", async () => {
+    const proc = await runCli(["done", "examples/portable-package-release"]);
+    const result = await collectOutput(proc);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr.trim()).toBe(
+      `error: ${path.join(ROOT, "examples/portable-package-release/EXECMAP.md")}: no open steps remain`,
+    );
   });
 
   test("check accepts example", async () => {
