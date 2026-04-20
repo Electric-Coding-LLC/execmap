@@ -12,7 +12,7 @@ implementation starts.
 It is built around three ideas:
 
 - the repo root has a small `PLAN.md` index that points to the active
-  initiative
+  initiative or records that none is active
 - every meaningful initiative gets one top-level execution map
 - each meaningful step can have a small step doc when it needs more thought
 
@@ -25,8 +25,9 @@ The repo root has one entrypoint document:
 
 - `PLAN.md`
 
-That file points to the active initiative map. It is an index, not the place
-where step status is tracked.
+That file points to the active initiative map, or records `- None` when no
+initiative is active. It is an index, not the place where step status is
+tracked.
 
 Each initiative then has one control document:
 
@@ -101,7 +102,8 @@ execution maps.
 
 ## Authoring Conventions
 
-- Keep a root `PLAN.md` that points to the active `EXECMAP.md`.
+- Keep a root `PLAN.md` that points to the active `EXECMAP.md`, or set
+  `Active Plan` to `- None` when the repo has no active initiative.
 - Keep initiative folders self-contained.
 - Name step docs with a numeric prefix so the files match execution order.
 - If a step doc exists, link to it from the execution map.
@@ -143,6 +145,8 @@ execmap init "portable package release"
 4. Add step docs only for steps that need more definition.
 5. Use `execmap next` to identify the current step and `execmap done` when that
    step is actually complete.
+6. Use `execmap activate` or `execmap close` when the repo's active plan
+   changes.
 
 ## CLI
 
@@ -156,6 +160,8 @@ bun run check
 bun run src/cli.ts init "portable package release"
 bun run src/cli.ts next plans/portable-package-release
 bun run src/cli.ts done plans/portable-package-release
+bun run src/cli.ts activate plans/portable-package-release
+bun run src/cli.ts close
 bun run src/cli.ts check examples/portable-package-release
 ```
 
@@ -164,6 +170,8 @@ Commands:
 - `init`: scaffold a new initiative folder with an `EXECMAP.md` and numbered step docs
 - `next`: print the next unchecked step from an execution map
 - `done`: mark the first unchecked step complete in an execution map
+- `activate`: point `PLAN.md` at an existing execution map
+- `close`: clear the active plan and archive it under completed plans
 - `check`: validate required sections, step links, and step docs
 - `typecheck`: validate the Bun TypeScript CLI and tests with `tsc --noEmit`
 

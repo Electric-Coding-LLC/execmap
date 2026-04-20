@@ -34,6 +34,24 @@ async function collectOutput(proc: Bun.Subprocess) {
   return { stdout, stderr, exitCode: await proc.exited };
 }
 
+function renderPlan(activeLine = "- None", completedLines: string[] = ["- None"]) {
+  return [
+    "# Plan Index",
+    "",
+    "This file points to the active initiative map for the repo. Status and",
+    "checkbox state live in the linked `EXECMAP.md`, not here.",
+    "",
+    "## Active Plan",
+    "",
+    activeLine,
+    "",
+    "## Completed Plans",
+    "",
+    ...completedLines,
+    "",
+  ].join("\n");
+}
+
 afterEach(async () => {
   await Promise.all(
     TEMP_DIRS.splice(0).map(async (dir) => {
@@ -69,6 +87,18 @@ describe("execmap cli", () => {
     expect(await Bun.file(path.join(tmp, "plans/v0.4/EXECMAP.md")).exists()).toBe(true);
     expect(await Bun.file(path.join(tmp, "PLAN.md")).text()).toContain("[v0.4](./plans/v0.4/EXECMAP.md)");
     expect(result.stdout.trim()).toBe("plans/v0.4/EXECMAP.md");
+  });
+
+  test("init reuses an existing no-active PLAN.md", async () => {
+    const tmp = await mkdtemp(path.join(os.tmpdir(), "execmap-"));
+    TEMP_DIRS.push(tmp);
+    await writeFile(path.join(tmp, "PLAN.md"), renderPlan(), "utf8");
+
+    const proc = await runCli(["init", "Alpha Launch"], tmp);
+    const result = await collectOutput(proc);
+
+    expect(result.exitCode).toBe(0);
+    expect(await Bun.file(path.join(tmp, "PLAN.md")).text()).toContain("[Alpha Launch](./plans/alpha-launch/EXECMAP.md)");
   });
 
   test("next resolves active plan from repo root", async () => {
@@ -139,6 +169,87 @@ describe("execmap cli", () => {
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain("OK: plans/alpha-launch/EXECMAP.md");
+  });
+
+  test("next fails clearly when repo root has no active plan", async () => {
+    const tmp = await mkdtemp(path.join(os.tmpdir(), "execmap-"));
+    TEMP_DIRS.push(tmp);
+    await writeFile(path.join(tmp, "PLAN.md"), renderPlan(), "utf8");
+
+    const proc = await runCli(["next"], tmp);
+    const result = await collectOutput(proc);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr.trim()).toEndWith("/PLAN.md: no active plan");
+  });
+
+  test("done fails clearly when repo root has no active plan", async () => {
+    const tmp = await mkdtemp(path.join(os.tmpdir(), "execmap-"));
+    TEMP_DIRS.push(tmp);
+    await writeFile(path.join(tmp, "PLAN.md"), renderPlan(), "utf8");
+
+    const proc = await runCli(["done"], tmp);
+    const result = await collectOutput(proc);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr.trim()).toEndWith("/PLAN.md: no active plan");
+  });
+
+  test("activate sets the active plan from an existing initiative", async () => {
+    const tmp = await mkdtemp(path.join(os.tmpdir(), "execmap-"));
+    TEMP_DIRS.push(tmp);
+
+    const initProc = await runCli(["init", "Alpha Launch"], tmp);
+    const initResult = await collectOutput(initProc);
+    expect(initResult.exitCode).toBe(0);
+
+    const closeProc = await runCli(["close"], tmp);
+    const closeResult = await collectOutput(closeProc);
+    expect(closeResult.exitCode).toBe(0);
+
+    const proc = await runCli(["activate", "plans/alpha-launch"], tmp);
+    const result = await collectOutput(proc);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout.trim()).toBe("Active: Alpha Launch");
+    expect(await Bun.file(path.join(tmp, "PLAN.md")).text()).toContain("[Alpha Launch](./plans/alpha-launch/EXECMAP.md)");
+    expect(await Bun.file(path.join(tmp, "PLAN.md")).text()).not.toContain("## Completed Plans\n\n- [Alpha Launch]");
+  });
+
+  test("close clears the active plan and archives it under completed plans", async () => {
+    const tmp = await mkdtemp(path.join(os.tmpdir(), "execmap-"));
+    TEMP_DIRS.push(tmp);
+
+    const initProc = await runCli(["init", "Alpha Launch"], tmp);
+    const initResult = await collectOutput(initProc);
+    expect(initResult.exitCode).toBe(0);
+
+    const proc = await runCli(["close"], tmp);
+    const result = await collectOutput(proc);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout.trim()).toBe("Closed: Alpha Launch");
+    expect(await Bun.file(path.join(tmp, "PLAN.md")).text()).toContain("## Active Plan\n\n- None");
+    expect(await Bun.file(path.join(tmp, "PLAN.md")).text()).toContain("[Alpha Launch](./plans/alpha-launch/EXECMAP.md)");
+  });
+
+  test("check accepts a repo root with no active plan", async () => {
+    const tmp = await mkdtemp(path.join(os.tmpdir(), "execmap-"));
+    TEMP_DIRS.push(tmp);
+    await writeFile(
+      path.join(tmp, "PLAN.md"),
+      renderPlan("- None", [
+        "- [first](./plans/first/EXECMAP.md)",
+        "- [second](./plans/second/EXECMAP.md)",
+      ]),
+      "utf8",
+    );
+
+    const proc = await runCli(["check"], tmp);
+    const result = await collectOutput(proc);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout.trim()).toBe("OK: PLAN.md (no active plan)");
   });
 
   test("next reports completion for finished example", async () => {

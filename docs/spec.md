@@ -16,8 +16,8 @@ Every repo using `execmap` uses:
 - one or more initiative folders
 
 `PLAN.md` is the repo entrypoint. It points to the active initiative map and
-may also list completed initiatives. It is not the source of truth for step
-status.
+may also list completed initiatives. If no initiative is active, `Active Plan`
+may be `- None`. It is not the source of truth for step status.
 
 Every initiative then uses:
 
@@ -42,6 +42,8 @@ It should not:
 - duplicate checkbox state
 - carry detailed step status
 - become a second execution map
+
+When no initiative is active, `Active Plan` may contain `- None`.
 
 ## `EXECMAP.md`
 
@@ -148,6 +150,7 @@ Step docs should not carry their own completion status. Completion is tracked in
 
 - Write the full execution map before implementation starts.
 - Update `PLAN.md` when the active initiative changes.
+- Use `PLAN.md: - None` when the repo has no active initiative.
 - Treat `EXECMAP.md` as the source of truth.
 - Use step docs only when a step needs real definition.
 - Check off a step only after its exit criteria are true.
