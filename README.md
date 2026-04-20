@@ -92,9 +92,9 @@ PLAN.md
 plans/
   <initiative-name>/
     EXECMAP.md
-    01-...
-    02-...
-    03-...
+    01-... (optional step doc)
+    02-... (optional step doc)
+    03-... (optional step doc)
 ```
 
 This repo provides templates and examples, but each project keeps its own local
@@ -142,7 +142,7 @@ execmap init "portable package release"
 1. Keep a root [`PLAN.md`](./PLAN.md) that points to the active initiative.
 2. Run `execmap init "<initiative>"` to scaffold `plans/<initiative>/`.
 3. Fill in `EXECMAP.md` before implementation starts.
-4. Add step docs only for steps that need more definition.
+4. Add step docs only for steps that need more definition with `execmap stepdoc <target> <step>`.
 5. Use `execmap next` to identify the current step and `execmap done` when that
    step is actually complete.
 6. Use `execmap activate` or `execmap close` when the repo's active plan
@@ -158,6 +158,7 @@ package, use `execmap ...`.
 bun install
 bun run check
 bun run src/cli.ts init "portable package release"
+bun run src/cli.ts stepdoc plans/portable-package-release 2
 bun run src/cli.ts next plans/portable-package-release
 bun run src/cli.ts done plans/portable-package-release
 bun run src/cli.ts activate plans/portable-package-release
@@ -167,9 +168,10 @@ bun run src/cli.ts check examples/portable-package-release
 
 Commands:
 
-- `init`: scaffold a new initiative folder with an `EXECMAP.md` and numbered step docs
+- `init`: scaffold a new initiative folder with an `EXECMAP.md` and default plain-text steps
 - `next`: print the next unchecked step from an execution map
 - `done`: mark the first unchecked step complete in an execution map
+- `stepdoc`: create and link a step doc for one existing execution-map item
 - `activate`: point `PLAN.md` at an existing execution map
 - `close`: clear the active plan and archive it under completed plans
 - `check`: validate required sections, step links, and step docs

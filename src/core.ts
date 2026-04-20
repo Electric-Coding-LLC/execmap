@@ -24,6 +24,7 @@ export type StepItem = {
   label: string;
   href: string | null;
   lineNo: number;
+  position: number;
 };
 
 export type PlanEntry = {
@@ -115,6 +116,7 @@ export function parseExecutionItems(lines: string[], startLine: number): StepIte
       label: linkMatch?.groups?.label ?? body,
       href: linkMatch?.groups?.href ?? null,
       lineNo: startLine + offset,
+      position: items.length + 1,
     });
   }
 
@@ -338,11 +340,11 @@ export function renderExecmap(stepNames: string[]): string {
     "## Execution Map",
     "",
     "<!-- Replace these example steps with the real path for your initiative. -->",
+    "<!-- Add a linked step doc only when a step needs more definition. -->",
   ];
 
-  for (const [index, stepName] of stepNames.entries()) {
-    const fileName = `./${String(index + 1).padStart(2, "0")}-${slugifyStep(stepName)}.md`;
-    lines.push(`- [ ] [${stepName}](${fileName})`);
+  for (const stepName of stepNames) {
+    lines.push(`- [ ] ${stepName}`);
   }
 
   lines.push(
@@ -415,5 +417,26 @@ export function setStepItemChecked(text: string, item: StepItem, checked: boolea
   }
 
   lines[index] = `- [${checked ? "x" : " "}] ${match.groups.body}`;
+  return lines.join(newline);
+}
+
+export function setStepItemLink(text: string, item: StepItem, href: string): string {
+  const newline = text.includes("\r\n") ? "\r\n" : "\n";
+  const lines = text.split(/\r?\n/);
+  const index = item.lineNo - 1;
+  const currentLine = lines[index];
+  if (currentLine === undefined) {
+    throw new Error(`step line is out of range: ${item.lineNo}`);
+  }
+
+  const match = currentLine.match(CHECKBOX_RE);
+  if (!match?.groups?.body) {
+    throw new Error(`step line is not a checkbox item: ${item.lineNo}`);
+  }
+  if (item.href) {
+    throw new Error(`step line already links to a step doc: ${item.lineNo}`);
+  }
+
+  lines[index] = `- [${item.checked ? "x" : " "}] [${item.label}](${href})`;
   return lines.join(newline);
 }

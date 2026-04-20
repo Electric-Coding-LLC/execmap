@@ -71,8 +71,9 @@ describe("execmap cli", () => {
     expect(result.exitCode).toBe(0);
     expect(await Bun.file(path.join(tmp, "PLAN.md")).exists()).toBe(true);
     expect(await Bun.file(path.join(tmp, "plans/alpha-launch/EXECMAP.md")).exists()).toBe(true);
-    expect(await Bun.file(path.join(tmp, "plans/alpha-launch/01-define-scope.md")).exists()).toBe(true);
+    expect(await Bun.file(path.join(tmp, "plans/alpha-launch/01-define-scope.md")).exists()).toBe(false);
     expect(await Bun.file(path.join(tmp, "PLAN.md")).text()).toContain("[Alpha Launch](./plans/alpha-launch/EXECMAP.md)");
+    expect(await Bun.file(path.join(tmp, "plans/alpha-launch/EXECMAP.md")).text()).toContain("- [ ] Define scope");
     expect(result.stdout.trim()).toBe("plans/alpha-launch/EXECMAP.md");
   });
 
@@ -113,8 +114,7 @@ describe("execmap cli", () => {
     const result = await collectOutput(proc);
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout.trim()).toContain("Define scope -> ");
-    expect(result.stdout.trim()).toEndWith("/plans/alpha-launch/01-define-scope.md");
+    expect(result.stdout.trim()).toBe("Define scope");
   });
 
   test("done resolves active plan from repo root", async () => {
@@ -131,7 +131,7 @@ describe("execmap cli", () => {
     expect(result.exitCode).toBe(0);
     expect(result.stdout.trim()).toBe("Done: Define scope");
     expect(await Bun.file(path.join(tmp, "plans/alpha-launch/EXECMAP.md")).text()).toContain(
-      "- [x] [Define scope](./01-define-scope.md)",
+      "- [x] Define scope",
     );
   });
 
@@ -150,10 +150,7 @@ describe("execmap cli", () => {
     const nextProc = await runCli(["next"], tmp);
     const nextResult = await collectOutput(nextProc);
     expect(nextResult.exitCode).toBe(0);
-    expect(nextResult.stdout.trim()).toContain("Define key contracts or boundaries -> ");
-    expect(nextResult.stdout.trim()).toEndWith(
-      "/plans/alpha-launch/02-define-key-contracts-or-boundaries.md",
-    );
+    expect(nextResult.stdout.trim()).toBe("Define key contracts or boundaries");
   });
 
   test("check resolves active plan from repo root", async () => {
@@ -169,6 +166,62 @@ describe("execmap cli", () => {
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain("OK: plans/alpha-launch/EXECMAP.md");
+  });
+
+  test("stepdoc creates and links a step doc by index", async () => {
+    const tmp = await mkdtemp(path.join(os.tmpdir(), "execmap-"));
+    TEMP_DIRS.push(tmp);
+
+    const initProc = await runCli(["init", "Alpha Launch"], tmp);
+    const initResult = await collectOutput(initProc);
+    expect(initResult.exitCode).toBe(0);
+
+    const proc = await runCli(["stepdoc", "plans/alpha-launch", "2"], tmp);
+    const result = await collectOutput(proc);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout.trim()).toBe("Step doc: plans/alpha-launch/02-define-key-contracts-or-boundaries.md");
+    expect(await Bun.file(path.join(tmp, "plans/alpha-launch/02-define-key-contracts-or-boundaries.md")).exists()).toBe(true);
+    expect(await Bun.file(path.join(tmp, "plans/alpha-launch/EXECMAP.md")).text()).toContain(
+      "- [ ] [Define key contracts or boundaries](./02-define-key-contracts-or-boundaries.md)",
+    );
+  });
+
+  test("stepdoc creates and links a step doc by exact label", async () => {
+    const tmp = await mkdtemp(path.join(os.tmpdir(), "execmap-"));
+    TEMP_DIRS.push(tmp);
+
+    const initProc = await runCli(["init", "Alpha Launch"], tmp);
+    const initResult = await collectOutput(initProc);
+    expect(initResult.exitCode).toBe(0);
+
+    const proc = await runCli(["stepdoc", "plans/alpha-launch", "Verify behavior"], tmp);
+    const result = await collectOutput(proc);
+
+    expect(result.exitCode).toBe(0);
+    expect(await Bun.file(path.join(tmp, "plans/alpha-launch/04-verify-behavior.md")).exists()).toBe(true);
+    expect(await Bun.file(path.join(tmp, "plans/alpha-launch/EXECMAP.md")).text()).toContain(
+      "- [ ] [Verify behavior](./04-verify-behavior.md)",
+    );
+  });
+
+  test("stepdoc fails when a step already links to a step doc", async () => {
+    const tmp = await mkdtemp(path.join(os.tmpdir(), "execmap-"));
+    TEMP_DIRS.push(tmp);
+
+    const initProc = await runCli(["init", "Alpha Launch"], tmp);
+    const initResult = await collectOutput(initProc);
+    expect(initResult.exitCode).toBe(0);
+
+    const firstProc = await runCli(["stepdoc", "plans/alpha-launch", "1"], tmp);
+    const firstResult = await collectOutput(firstProc);
+    expect(firstResult.exitCode).toBe(0);
+
+    const proc = await runCli(["stepdoc", "plans/alpha-launch", "1"], tmp);
+    const result = await collectOutput(proc);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("step already links to a step doc");
   });
 
   test("next fails clearly when repo root has no active plan", async () => {
