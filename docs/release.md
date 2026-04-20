@@ -1,101 +1,69 @@
-# Release Guide
+# Release Runbook
 
-This guide covers the `v0.1` release flow for `execmap`.
+This guide covers how `execmap` releases are prepared and published.
 
-## Release Message
+It is not the source of truth for release scope. Use the docs this way:
 
-`execmap v0.1 ships a Bun-first CLI and tracked skill bundle for bounded
-execution maps, with repo-root PLAN indexing and packaged-install verification.`
+- `plans/*/EXECMAP.md`: active execution and completion state
+- `CHANGELOG.md`: shipped package history
+- `docs/release.md`: publication runbook
 
-## Scope Guardrails
+Keep those responsibilities separate so the plan does not become a release
+manual, and the changelog does not become a step tracker.
 
-- Ship the existing `init`, `next`, and `check` CLI surface.
-- Keep `PLAN.md` as an index and `EXECMAP.md` as the source of truth.
-- Keep the installed runtime Bun-first for `0.1`.
-- Keep the release centered on publication and verification, not new product
-  expansion.
+## Normal PRs
 
-## Prerequisites
+Normal PRs do not need release metadata files.
 
-- Bun `>=1.3.11`
-- Push access to `origin`
-- A clean git worktree
-- npm trusted publishing configured for the
-  `@electric_coding/execmap` package from `Electric-Coding-LLC/execmap`, or an
-  equivalent npm publish path that the `release.yml` workflow can use
+## Release Flow
 
-## Preflight
+When you want to cut a release, run:
 
-Run the full local gate before creating release artifacts:
+```sh
+bun run release -- <patch|minor|major|x.y.z>
+```
+
+That command:
+
+- bumps `package.json`
+- updates `CHANGELOG.md` from shipped commits since the last published version
+- runs `bun run check`
+- runs `bun run pack:dry-run`
+- creates the release commit
+- creates the matching tag
+- pushes the release commit by default
+- waits for CI on `main`
+- pushes the tag so the publish workflow can run
+
+Use `--no-push` to prepare the release commit and tag locally only. Use
+`--push-tag` to skip waiting for CI locally and push the tag immediately.
+
+## Publish Workflow
+
+The publish workflow lives at `.github/workflows/release.yml` and runs when a
+tag like `v0.2.0` is pushed.
+
+It:
+
+- validates that the tag matches `package.json`
+- verifies successful CI for the tagged commit on `main`
+- reruns `bun run check`
+- publishes to npm if the version is not already published
+- creates a GitHub release using the matching `CHANGELOG.md` entry
+
+## Local Checks
+
+Before cutting a release, run the normal local gate if you have not just run
+the release helper:
 
 ```sh
 bun install
 bun run check
-bun run pack:dry-run
 ```
-
-## Release Workflow
-
-`execmap` uses GitHub Actions for package publication.
-
-The release workflow lives at `.github/workflows/release.yml` and runs when a
-tag like `v0.1.0` is pushed.
-
-Use the bundled helper to bump the version, run the release gate, create the
-release commit, and create the matching local `v<version>` tag:
-
-```sh
-bun run release -- patch
-```
-
-For the first automated follow-up after `0.1.0`, use:
-
-```sh
-bun run release -- patch
-```
-
-The helper:
-
-- requires a clean git worktree
-- runs `bun run check`
-- runs `bun run pack:dry-run`
-- commits the version bump as `@electric_coding/execmap@<version>`
-- creates the matching local `v<version>` tag
-- pushes the release commit by default
-- waits for successful `CI` on `main`
-- pushes the tag after CI succeeds
-
-Use `--no-push` to create only the local release commit and tag. Use
-`--push-tag` to push the tag immediately instead of waiting for CI locally.
-
-If you are not using the helper, make sure all of these are true before pushing
-the tag:
-
-- make sure `package.json` is already at the intended release version
-- make sure the matching commit is on `main`
-- wait for `CI / verify` to succeed on that `main` commit
-
-The equivalent manual sequence is:
-
-```sh
-git switch main
-git pull --ff-only
-git tag v0.1.0
-git push origin v0.1.0
-```
-
-The workflow then:
-
-- verifies the tag matches `package.json` version
-- verifies successful `CI` for the tagged `main` commit
-- runs `bun run check`
-- skips publish if the version is already on npm
-- otherwise runs `npm publish --provenance --access public`
-- creates the GitHub release notes for the tag
 
 ## Verify Publication
 
-Confirm the published version:
+After the release workflow runs, confirm the published version:
 
 ```sh
 npm view @electric_coding/execmap version
@@ -104,15 +72,18 @@ npm view @electric_coding/execmap version
 Confirm the GitHub release exists:
 
 ```sh
-gh release view v0.1.0
+gh release view v<version>
 ```
 
 ## If Publish Fails
 
-The most likely remaining blocker for `0.1` is npm-side configuration.
+The most likely remaining blockers are workflow, npm-side configuration, or a
+stale changelog base tag.
 
-If the workflow fails at `npm publish`:
+If the workflow fails during publish:
 
 - confirm trusted publishing is configured for this repository on npm
 - confirm the package name is still intended to be `@electric_coding/execmap`
-- rerun the workflow after the npm-side fix, or push the tag again if needed
+- confirm the pushed tag matches `package.json`
+- confirm the tagged commit succeeded in `CI / verify` on `main`
+- rerun the workflow after the underlying fix

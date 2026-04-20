@@ -60,10 +60,27 @@ jobs:
             exit 1
           fi
 
+          notes_file="$(mktemp)"
+          awk -v version="$package_version" '
+            $0 ~ "^## " version " - " { capture=1 }
+            capture {
+              if ($0 ~ "^## " && $0 !~ "^## " version " - ") {
+                exit
+              }
+              print
+            }
+          ' CHANGELOG.md > "$notes_file"
+
+          if [[ ! -s "$notes_file" ]]; then
+            echo "CHANGELOG.md does not contain an entry for ${package_version}"
+            exit 1
+          fi
+
           echo "package_name=$package_name" >> "$GITHUB_OUTPUT"
           echo "package_version=$package_version" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "target_sha=$target_sha" >> "$GITHUB_OUTPUT"
+          echo "notes_file=$notes_file" >> "$GITHUB_OUTPUT"
 
       - name: Require successful CI for tagged commit
         env:
@@ -121,6 +138,7 @@ jobs:
           set -euo pipefail
 
           tag="${{ steps.release.outputs.tag }}"
+          notes_file="${{ steps.release.outputs.notes_file }}"
 
           if gh release view "$tag" >/dev/null 2>&1; then
             echo "GitHub release $tag already exists"
@@ -130,4 +148,4 @@ jobs:
           gh release create "$tag" \
             --target "${{ steps.release.outputs.target_sha }}" \
             --title "$tag" \
-            --generate-notes
+            --notes-file "$notes_file"
