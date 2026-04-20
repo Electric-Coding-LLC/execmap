@@ -110,10 +110,9 @@ execution maps.
 
 ## In This Repo
 
+- [CHANGELOG.md](./CHANGELOG.md): shipped package history
 - [docs/spec.md](./docs/spec.md): canonical system definition
-- [docs/release.md](./docs/release.md): release and publication flow
-- [docs/releases/0.1.md](./docs/releases/0.1.md): `0.1` release scope and limits
-- [docs/releases/0.2.md](./docs/releases/0.2.md): `0.2` step-progression scope and limits
+- [docs/release.md](./docs/release.md): generic publication runbook
 - [templates/PLAN.md](./templates/PLAN.md): root plan index template
 - [templates/EXECMAP.md](./templates/EXECMAP.md): top-level map template
 - [templates/STEP.md](./templates/STEP.md): step-doc template
@@ -168,24 +167,26 @@ Commands:
 - `check`: validate required sections, step links, and step docs
 - `typecheck`: validate the Bun TypeScript CLI and tests with `tsc --noEmit`
 
-## Release Notes
+## Releases
 
-The shipped `0.1` release established the Bun-first scaffold and validation
-workflow:
+Normal PRs do not need release metadata.
 
-- the public CLI surface is `init`, `next`, and `check`
-- the tracked `skills/execmap/` bundle stays aligned with the CLI workflow
-- packaged-install verification is part of the release contract
-- `bun run release -- <patch|minor|major|x.y.z>` is the release helper for
-  version bump, local release checks, commit, and tag creation
+When you want to cut a release, run:
 
-The active `0.2` release track adds the first supported mutating command:
+```bash
+bun run release -- <patch|minor|major|x.y.z>
+```
 
-- `done` advances the current execution map by marking the first unchecked item
-  complete
-- the repo-root and direct-target workflows stay aligned with the tracked skill
-- broader plan editing remains out of scope for now
+That command:
 
-See [docs/releases/0.1.md](./docs/releases/0.1.md) for the shipped `0.1`
-contract and [docs/releases/0.2.md](./docs/releases/0.2.md) for the current
-`0.2` scope and limits.
+- bumps the package version
+- updates `CHANGELOG.md`
+- runs the release gate
+- commits and tags the release
+- pushes the tag for publication
+
+The GitHub Actions release workflow then publishes the tagged version and uses
+the matching `CHANGELOG.md` entry for the GitHub release notes.
+
+Use [CHANGELOG.md](./CHANGELOG.md) for shipped history and
+[docs/release.md](./docs/release.md) for the maintainer runbook.
