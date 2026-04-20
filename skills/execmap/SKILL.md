@@ -21,10 +21,12 @@ Do not use `execmap` for trivial one-step edits.
 
 ## Core Model
 
-- The repo root has one `PLAN.md` that points to the active initiative.
+- The repo root has one `PLAN.md` that indexes the repo's current planning state.
 - Each initiative has one top-level `EXECMAP.md`.
 - `PLAN.md` is an index only. `EXECMAP.md` is the source of truth for sequence
   and status.
+- `PLAN.md` can point to one active `plans/<initiative>/EXECMAP.md` or state
+  `None` when there is no active initiative.
 - Step docs are optional and exist only for steps that need more definition.
 - The next unchecked item in `Execution Map` is the default next action.
 
@@ -53,7 +55,8 @@ Required step-doc sections:
 
 3. Maintain the repo entrypoint.
 - Create or update a root `PLAN.md`.
-- Point it at the active `plans/<initiative>/EXECMAP.md`.
+- Point it at the active `plans/<initiative>/EXECMAP.md`, or set `Active Plan`
+  to `None` when the repo has no active initiative.
 - Keep `PLAN.md` as an index only. Do not duplicate checkbox state there.
 
 4. Create the top-level map before implementation.
@@ -108,7 +111,7 @@ The workflow still applies even with no CLI.
 When introducing `execmap` into a repo or task:
 
 - Create the map instead of only describing it abstractly.
-- Create or update `PLAN.md` so the active map is discoverable from the repo
+- Create or update `PLAN.md` so the repo state is discoverable from the repo
   root.
 - If the user asked for execution, start from the first unchecked item after
   the map is in place.
@@ -122,7 +125,7 @@ When introducing `execmap` into a repo or task:
 - Do not create execution maps for trivial edits.
 - Do not start implementation before the top-level path is mapped when the work
   is clearly non-trivial.
-- Do not leave the active initiative ambiguous from the repo root.
+- Do not leave the repo's planning state ambiguous from the repo root.
 - Do not let step docs become a second source of truth.
 - Do not mark steps complete based on intent; use observable exit criteria.
 - Keep plans compact and practical.
