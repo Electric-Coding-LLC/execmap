@@ -89,6 +89,10 @@ Items that need more detail should link to step docs.
 Mark a checkbox complete only when the corresponding step exit criteria are
 actually satisfied.
 
+When helper tooling is available, it may support advancing the map directly.
+That helper must preserve `EXECMAP.md` as the source of truth rather than
+introducing a second state store.
+
 ## Done When
 
 List the observable conditions that mark the initiative complete.
@@ -147,6 +151,8 @@ Step docs should not carry their own completion status. Completion is tracked in
 - Treat `EXECMAP.md` as the source of truth.
 - Use step docs only when a step needs real definition.
 - Check off a step only after its exit criteria are true.
+- When using CLI helpers, prefer commands that update `EXECMAP.md` directly over
+  duplicating state anywhere else.
 - Update the map before changing direction.
 - Keep docs compact and practical.
 - Prefer one initiative map over scattered planning notes.

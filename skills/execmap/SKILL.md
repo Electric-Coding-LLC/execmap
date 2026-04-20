@@ -69,6 +69,8 @@ Required step-doc sections:
 
 6. Execute from the map.
 - Treat the first unchecked item as the current step.
+- Use `execmap done ...` when the current step is actually complete, if that
+  helper is available in the repo or installed package.
 - Update `EXECMAP.md` before changing sequence or scope.
 - Mark a step complete only after its exit criteria are actually true.
 
@@ -83,8 +85,8 @@ scaffolding and validation.
 
 Common paths:
 
-- `execmap init ...`, `execmap next ...`, `execmap check ...` if installed as a
-  command or Bun package
+- `execmap init ...`, `execmap next ...`, `execmap done ...`, `execmap check ...`
+  if installed as a command or Bun package
 - `bun run src/cli.ts ...` in a repo that vendors the Bun helper
 
 Use the helper when it reduces manual work. Do not block on it.

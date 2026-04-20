@@ -62,6 +62,7 @@ async function main(): Promise<void> {
     await run(["bun", "add", tarballPath], installDir);
     await run(["./node_modules/.bin/execmap", "init", "Smoke Plan"], installDir);
     await run(["./node_modules/.bin/execmap", "check", "plans/smoke-plan"], installDir);
+    await run(["./node_modules/.bin/execmap", "done", "plans/smoke-plan"], installDir);
     await run(["./node_modules/.bin/execmap", "next", "plans/smoke-plan"], installDir);
   } finally {
     await Promise.all([
