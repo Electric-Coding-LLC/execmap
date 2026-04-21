@@ -5,6 +5,21 @@ All notable shipped changes to `@electric_coding/execmap` are recorded here.
 This file tracks published package history. Plans under `plans/*` track
 execution, not shipped versions.
 
+## 0.8.0 - 2026-04-21
+
+### Changed
+
+- Ship execmap 0.5 plan visibility
+- Merge pull request #10 from Electric-Coding-LLC/codex/execmap-0.5-plan-visibility
+- Ship 0.6 roadmap integration
+- Merge pull request #11 from Electric-Coding-LLC/codex/execmap-0.6-roadmap-integration
+- Ship 0.7 authoring checks
+- Merge pull request #12 from Electric-Coding-LLC/codex/execmap-0.7-authoring-checks
+- Ship 0.8 small editing helper
+- Merge pull request #13 from Electric-Coding-LLC/codex/execmap-0.8-step-rename
+- Close out completed roadmap
+- Merge pull request #14 from Electric-Coding-LLC/codex/execmap-roadmap-closeout
+
 ## 0.4.0 - 2026-04-20
 
 ### Changed
@@ -44,6 +59,7 @@ execution, not shipped versions.
 
 - Initial public release of the Bun-first `execmap` CLI.
 - Ship the `init`, `next`, and `check` workflow for bounded execution maps.
+
 
 
 
