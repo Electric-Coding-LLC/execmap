@@ -110,9 +110,26 @@ execution maps.
 - Keep step status only in `EXECMAP.md`, not duplicated in step docs.
 - Keep `PLAN.md` as an index only; do not duplicate checkbox state there.
 
+## Roadmap
+
+If a repo wants a roadmap, keep it separate from the active `execmap` step
+state, but it may still carry minimal release-level lifecycle state.
+
+- Use a roadmap for release order, release scope, and minimal release status.
+- Do not put roadmap entries in `PLAN.md`.
+- Do not pre-create `plans/<version>/EXECMAP.md` files only to represent future
+  ideas.
+- If the roadmap carries status, keep it release-level only, such as
+  `planned`, `active`, `shipped`, or `blocked`.
+- Keep detailed execution progress in the promoted `EXECMAP.md`, not in the
+  roadmap.
+- When a roadmap item becomes real work, promote it into `plans/<version>/`
+  and point `PLAN.md` at that initiative.
+
 ## In This Repo
 
 - [CHANGELOG.md](./CHANGELOG.md): shipped package history
+- [docs/roadmap.md](./docs/roadmap.md): release order, lifecycle, and non-goals
 - [docs/spec.md](./docs/spec.md): canonical system definition
 - [docs/release.md](./docs/release.md): generic publication runbook
 - [templates/PLAN.md](./templates/PLAN.md): root plan index template
@@ -143,8 +160,9 @@ execmap init "portable package release"
 2. Run `execmap init "<initiative>"` to scaffold `plans/<initiative>/`.
 3. Fill in `EXECMAP.md` before implementation starts.
 4. Add step docs only for steps that need more definition with `execmap stepdoc <target> <step>`.
-5. Use `execmap next` to identify the current step and `execmap done` when that
-   step is actually complete.
+5. Use `execmap status` to inspect the current plan state, `execmap next` to
+   identify the current step, and `execmap done` when that step is actually
+   complete.
 6. Use `execmap activate` or `execmap close` when the repo's active plan
    changes.
 
@@ -158,6 +176,7 @@ package, use `execmap ...`.
 bun install
 bun run check
 bun run src/cli.ts init "portable package release"
+bun run src/cli.ts status
 bun run src/cli.ts stepdoc plans/portable-package-release 2
 bun run src/cli.ts next plans/portable-package-release
 bun run src/cli.ts done plans/portable-package-release
@@ -170,6 +189,7 @@ Commands:
 
 - `init`: scaffold a new initiative folder with an `EXECMAP.md` and default plain-text steps
 - `next`: print the next unchecked step from an execution map
+- `status`: print the current active plan or explicit target plus the next actionable step
 - `done`: mark the first unchecked step complete in an execution map
 - `stepdoc`: create and link a step doc for one existing execution-map item
 - `activate`: point `PLAN.md` at an existing execution map

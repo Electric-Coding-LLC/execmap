@@ -12,6 +12,7 @@ import {
   findPlan,
   parseExecutionItems,
   parseSections,
+  readPlanStatus,
   readPlan,
   readText,
   renderExecmap,
@@ -277,6 +278,36 @@ async function commandNext(targetArg?: string): Promise<number> {
   return 0;
 }
 
+async function commandStatus(targetArg?: string): Promise<number> {
+  const target = targetArg ?? ".";
+  try {
+    const status = await readPlanStatus(target);
+    if (!status.activeLabel) {
+      console.log("Active Plan: None");
+      return 0;
+    }
+
+    const displayExecmapPath =
+      status.execmapPath
+        ? (path.relative(process.cwd(), status.execmapPath) || status.execmapPath)
+        : null;
+
+    console.log(`Active Plan: ${status.activeLabel}`);
+    if (displayExecmapPath) {
+      console.log(`Execmap: ${displayExecmapPath}`);
+    }
+    console.log(`Next Step: ${status.nextStepLabel ?? "None"}`);
+    if (status.complete) {
+      console.log("State: complete");
+    }
+    return 0;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`error: ${message}`);
+    return 1;
+  }
+}
+
 async function commandClose(args: string[]): Promise<number> {
   const usage = "usage: execmap close [--plan <dir|PLAN.md>]";
   const { positionals, plan } = parsePlanTargetArgs(args, usage);
@@ -364,7 +395,7 @@ async function commandCheck(targetArg?: string): Promise<number> {
 }
 
 function printUsage(): void {
-  console.error("usage: execmap <init|next|done|stepdoc|activate|close|check> [args]");
+  console.error("usage: execmap <init|next|status|done|stepdoc|activate|close|check> [args]");
 }
 
 export async function main(argv = process.argv.slice(2)): Promise<number> {
@@ -379,6 +410,9 @@ export async function main(argv = process.argv.slice(2)): Promise<number> {
   }
   if (command === "next") {
     return commandNext(rest[0]);
+  }
+  if (command === "status") {
+    return commandStatus(rest[0]);
   }
   if (command === "done") {
     return commandDone(rest[0]);
