@@ -38,6 +38,13 @@ export type PlanState = {
   completed: PlanEntry[];
 };
 
+export type PlanStatus = {
+  activeLabel: string | null;
+  execmapPath: string | null;
+  nextStepLabel: string | null;
+  complete: boolean;
+};
+
 export function slugifyStep(value: string): string {
   const slug = value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   return slug || "step";
@@ -321,6 +328,46 @@ export async function findExecmap(target: string): Promise<string> {
   }
 
   return targetPath;
+}
+
+export async function readPlanStatus(target: string): Promise<PlanStatus> {
+  const planPath = await findPlan(target);
+  let activeLabel: string | null = null;
+
+  if (planPath) {
+    const { active } = await readPlan(planPath);
+    if (!active) {
+      return {
+        activeLabel: null,
+        execmapPath: null,
+        nextStepLabel: null,
+        complete: false,
+      };
+    }
+    activeLabel = active.label;
+  }
+
+  const execmapPath = await findExecmap(target);
+  const text = await readText(execmapPath);
+  const { order, sections } = parseSections(text);
+  const errors = requireSections(execmapPath, order, sections, MAP_SECTIONS);
+  if (errors.length > 0) {
+    throw new Error(errors[0] ?? `invalid execution map: ${execmapPath}`);
+  }
+
+  const executionLines = sections.get("Execution Map") ?? [];
+  const items = parseExecutionItems(executionLines, sectionStartLine(text, "Execution Map"));
+  if (items.length === 0) {
+    throw new Error(`${execmapPath}: execution map must contain at least one checkbox item`);
+  }
+
+  const nextItem = items.find((item) => !item.checked) ?? null;
+  return {
+    activeLabel: activeLabel ?? path.basename(path.dirname(execmapPath)),
+    execmapPath,
+    nextStepLabel: nextItem?.label ?? null,
+    complete: nextItem === null,
+  };
 }
 
 export function renderExecmap(stepNames: string[]): string {

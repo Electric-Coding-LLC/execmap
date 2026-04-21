@@ -117,6 +117,52 @@ describe("execmap cli", () => {
     expect(result.stdout.trim()).toBe("Define scope");
   });
 
+  test("status resolves active plan from repo root", async () => {
+    const tmp = await mkdtemp(path.join(os.tmpdir(), "execmap-"));
+    TEMP_DIRS.push(tmp);
+
+    const initProc = await runCli(["init", "Alpha Launch"], tmp);
+    const initResult = await collectOutput(initProc);
+    expect(initResult.exitCode).toBe(0);
+
+    const proc = await runCli(["status"], tmp);
+    const result = await collectOutput(proc);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("Active Plan: Alpha Launch");
+    expect(result.stdout).toContain("Execmap: plans/alpha-launch/EXECMAP.md");
+    expect(result.stdout).toContain("Next Step: Define scope");
+  });
+
+  test("status reports no active plan clearly from repo root", async () => {
+    const tmp = await mkdtemp(path.join(os.tmpdir(), "execmap-"));
+    TEMP_DIRS.push(tmp);
+    await writeFile(path.join(tmp, "PLAN.md"), renderPlan(), "utf8");
+
+    const proc = await runCli(["status"], tmp);
+    const result = await collectOutput(proc);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout.trim()).toBe("Active Plan: None");
+  });
+
+  test("status accepts an explicit execmap target", async () => {
+    const tmp = await mkdtemp(path.join(os.tmpdir(), "execmap-"));
+    TEMP_DIRS.push(tmp);
+
+    const initProc = await runCli(["init", "Alpha Launch"], tmp);
+    const initResult = await collectOutput(initProc);
+    expect(initResult.exitCode).toBe(0);
+
+    const proc = await runCli(["status", "plans/alpha-launch"], tmp);
+    const result = await collectOutput(proc);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("Active Plan: alpha-launch");
+    expect(result.stdout).toContain("Execmap: plans/alpha-launch/EXECMAP.md");
+    expect(result.stdout).toContain("Next Step: Define scope");
+  });
+
   test("done resolves active plan from repo root", async () => {
     const tmp = await mkdtemp(path.join(os.tmpdir(), "execmap-"));
     TEMP_DIRS.push(tmp);
@@ -311,6 +357,17 @@ describe("execmap cli", () => {
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout.trim()).toBe("All steps are complete.");
+  });
+
+  test("status reports completion for a finished execmap", async () => {
+    const proc = await runCli(["status", "examples/portable-package-release"]);
+    const result = await collectOutput(proc);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("Active Plan: portable-package-release");
+    expect(result.stdout).toContain("Execmap: examples/portable-package-release/EXECMAP.md");
+    expect(result.stdout).toContain("Next Step: None");
+    expect(result.stdout).toContain("State: complete");
   });
 
   test("done fails when all steps are complete", async () => {

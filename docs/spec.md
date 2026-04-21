@@ -27,6 +27,10 @@ Every initiative then uses:
 The top-level map is the control document. Step docs exist only to support
 execution of specific steps.
 
+A repo may also keep a roadmap for future directions. That roadmap may carry
+minimal release-level lifecycle state, but it is not the place for detailed
+execution status.
+
 ## `PLAN.md`
 
 The root `PLAN.md` should stay minimal.
@@ -137,6 +141,32 @@ The observable conditions that make the step complete.
 Step docs should not carry their own completion status. Completion is tracked in
 `EXECMAP.md`.
 
+## Roadmap
+
+A roadmap is optional. If present, it should answer a different question from
+`PLAN.md`.
+
+- `PLAN.md`: what is active right now
+- `EXECMAP.md`: what is the ordered path for that active initiative
+- roadmap: what may become a later initiative
+
+The roadmap should not:
+
+- carry checkbox execution state
+- act like a backlog of pre-created initiatives
+- become a second place to track active work
+
+The roadmap may carry small release-level fields such as:
+
+- `Status: planned|active|shipped|blocked`
+- `Execmap: plans/<initiative>/EXECMAP.md` after promotion
+
+Use that only for release-level coordination. Step completion and detailed
+execution state still belong in `EXECMAP.md`.
+
+When a roadmap item becomes active work, move it into `plans/<initiative>/`
+with its own `EXECMAP.md`, then update `PLAN.md` to point at it.
+
 ## Authoring Conventions
 
 - Keep one root `PLAN.md` in the repo as the index of initiatives.
@@ -153,6 +183,8 @@ Step docs should not carry their own completion status. Completion is tracked in
 - Update `PLAN.md` when the active initiative changes.
 - Use `PLAN.md: - None` when the repo has no active initiative.
 - Treat `EXECMAP.md` as the source of truth.
+- If a roadmap exists, it may carry release-level lifecycle state, but do not
+  treat it as a second execution map.
 - Use step docs only when a step needs real definition.
 - Check off a step only after its exit criteria are true.
 - When using CLI helpers, prefer commands that update `EXECMAP.md` directly over
@@ -170,6 +202,7 @@ It does not try to replace:
 - issue tracking
 - git history
 - release notes
+- roadmaps for future candidates
 - project management systems
 
 It exists to answer one question clearly:
