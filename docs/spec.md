@@ -28,7 +28,7 @@ The top-level map is the control document. Step docs exist only to support
 execution of specific steps.
 
 A repo may also keep a roadmap for future directions. That roadmap may carry
-minimal release-level lifecycle state, but it is not the place for detailed
+minimal version-level lifecycle state, but it is not the place for detailed
 execution status.
 
 ## `PLAN.md`
@@ -156,16 +156,19 @@ The roadmap should not:
 - act like a backlog of pre-created initiatives
 - become a second place to track active work
 
-The roadmap may carry small release-level fields such as:
+The roadmap may carry small version-level fields such as:
 
-- `Status: planned|active|shipped|blocked`
+- `Status: planned|active|completed|blocked`
 - `Execmap: plans/<initiative>/EXECMAP.md` after promotion
 
-Use that only for release-level coordination. Step completion and detailed
+Use that only for version-level coordination. Step completion and detailed
 execution state still belong in `EXECMAP.md`.
 
 When a roadmap item becomes active work, move it into `plans/<initiative>/`
 with its own `EXECMAP.md`, then update `PLAN.md` to point at it.
+
+If helper tooling surfaces roadmap information, it should stay read-only and
+keep roadmap state separate from `PLAN.md` and `EXECMAP.md`.
 
 ## Authoring Conventions
 
@@ -183,8 +186,10 @@ with its own `EXECMAP.md`, then update `PLAN.md` to point at it.
 - Update `PLAN.md` when the active initiative changes.
 - Use `PLAN.md: - None` when the repo has no active initiative.
 - Treat `EXECMAP.md` as the source of truth.
-- If a roadmap exists, it may carry release-level lifecycle state, but do not
+- If a roadmap exists, it may carry version-level lifecycle state, but do not
   treat it as a second execution map.
+- If a roadmap helper exists, use it to inspect the current roadmap version and
+  active plan together without mutating either artifact.
 - Use step docs only when a step needs real definition.
 - Check off a step only after its exit criteria are true.
 - When using CLI helpers, prefer commands that update `EXECMAP.md` directly over

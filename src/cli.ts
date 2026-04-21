@@ -10,6 +10,7 @@ import {
   exists,
   findExecmap,
   findPlan,
+  readRoadmapStatus,
   parseExecutionItems,
   parseSections,
   readPlanStatus,
@@ -308,6 +309,45 @@ async function commandStatus(targetArg?: string): Promise<number> {
   }
 }
 
+async function commandRoadmap(targetArg?: string): Promise<number> {
+  const target = targetArg ?? ".";
+  try {
+    const status = await readRoadmapStatus(target);
+    const displayRoadmapPath = path.relative(process.cwd(), status.roadmapPath) || status.roadmapPath;
+    console.log(`Roadmap: ${displayRoadmapPath}`);
+
+    if (!status.currentVersion) {
+      console.log("Current Version: None");
+      console.log("State: complete");
+    } else {
+      console.log(`Current Version: ${status.currentVersion.label}`);
+      console.log(`Version Title: ${status.currentVersion.title}`);
+      console.log(`Version Status: ${status.currentVersion.status}`);
+      if (status.currentVersion.goal) {
+        console.log(`Goal: ${status.currentVersion.goal}`);
+      }
+      if (status.currentVersion.execmapHref) {
+        const execmapPath = path.resolve(
+          path.dirname(status.roadmapPath),
+          "..",
+          status.currentVersion.execmapHref,
+        );
+        console.log(`Execmap: ${path.relative(process.cwd(), execmapPath) || execmapPath}`);
+      }
+    }
+
+    console.log(`Active Plan: ${status.activePlanLabel ?? "None"}`);
+    if (status.activeExecmapPath) {
+      console.log(`Active Execmap: ${path.relative(process.cwd(), status.activeExecmapPath) || status.activeExecmapPath}`);
+    }
+    return 0;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`error: ${message}`);
+    return 1;
+  }
+}
+
 async function commandClose(args: string[]): Promise<number> {
   const usage = "usage: execmap close [--plan <dir|PLAN.md>]";
   const { positionals, plan } = parsePlanTargetArgs(args, usage);
@@ -395,7 +435,7 @@ async function commandCheck(targetArg?: string): Promise<number> {
 }
 
 function printUsage(): void {
-  console.error("usage: execmap <init|next|status|done|stepdoc|activate|close|check> [args]");
+  console.error("usage: execmap <init|next|status|roadmap|done|stepdoc|activate|close|check> [args]");
 }
 
 export async function main(argv = process.argv.slice(2)): Promise<number> {
@@ -413,6 +453,9 @@ export async function main(argv = process.argv.slice(2)): Promise<number> {
   }
   if (command === "status") {
     return commandStatus(rest[0]);
+  }
+  if (command === "roadmap") {
+    return commandRoadmap(rest[0]);
   }
   if (command === "done") {
     return commandDone(rest[0]);
