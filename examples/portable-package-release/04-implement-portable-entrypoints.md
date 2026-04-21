@@ -1,4 +1,4 @@
-# Implement Portable Entrypoints
+# Implement portable entrypoints
 
 [Back to Execution Map](./EXECMAP.md)
 

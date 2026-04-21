@@ -26,6 +26,7 @@ import {
   setStepItemLink,
   slugifyInitiative,
   slugifyStep,
+  validateExecmapAuthoring,
   validateStepDoc,
 } from "./core";
 
@@ -390,6 +391,9 @@ async function commandCheck(targetArg?: string): Promise<number> {
   if (items.length === 0) {
     errors.push(`${execmapPath}: execution map must contain at least one checkbox item`);
   }
+  const authoringValidation = validateExecmapAuthoring(execmapPath, text, items);
+  errors.push(...authoringValidation.errors);
+  warnings.push(...authoringValidation.warnings);
 
   const linkedPaths = new Set<string>();
   for (const item of items) {
@@ -402,7 +406,7 @@ async function commandCheck(targetArg?: string): Promise<number> {
       errors.push(`${execmapPath}:${item.lineNo}: linked step doc does not exist: ${item.href}`);
       continue;
     }
-    const result = await validateStepDoc(target);
+    const result = await validateStepDoc(target, item);
     errors.push(...result.errors);
     warnings.push(...result.warnings);
   }
@@ -414,6 +418,9 @@ async function commandCheck(targetArg?: string): Promise<number> {
     const stepPath = path.resolve(path.dirname(execmapPath), entry.name);
     if (!linkedPaths.has(stepPath)) {
       warnings.push(`${stepPath}: step doc is not linked from EXECMAP.md`);
+    }
+    if (!/^\d+-.*\.md$/.test(entry.name)) {
+      warnings.push(`${stepPath}: step doc filename should use a numeric prefix and slug shape`);
     }
   }
 

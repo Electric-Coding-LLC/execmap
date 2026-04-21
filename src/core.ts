@@ -12,6 +12,25 @@ export const DEFAULT_STEPS = [
   "Finalize rollout",
 ];
 
+const EXECMAP_PLACEHOLDERS = [
+  "Describe the initiative in one sentence.",
+  "- Keep:",
+  "- Do not:",
+  "- Avoid:",
+  "<!-- Replace these example steps with the real path for your initiative. -->",
+  "<!-- Add a linked step doc only when a step needs more definition. -->",
+  "- Observable outcome:",
+];
+
+const STEP_PLACEHOLDERS = [
+  "# Step Title",
+  "Describe what this step needs to accomplish.",
+  "- Concrete task",
+  "- Important boundary",
+  "- Observable completion condition",
+  "<!-- Track completion in EXECMAP.md, not in this file. -->",
+];
+
 const HEADING_RE = /^## (?<title>.+)$/;
 const ROADMAP_VERSION_RE = /^### `(?<label>[^`]+)`: (?<title>.+)$/;
 const CHECKBOX_RE = /^- \[(?<mark>[ xX])\] (?<body>.+)$/;
@@ -65,6 +84,11 @@ export type RoadmapStatus = {
   currentVersion: RoadmapVersion | null;
   activePlanLabel: string | null;
   activeExecmapPath: string | null;
+};
+
+export type ValidationResult = {
+  errors: string[];
+  warnings: string[];
 };
 
 export function slugifyStep(value: string): string {
@@ -150,6 +174,20 @@ export function parseExecutionItems(lines: string[], startLine: number): StepIte
   }
 
   return items;
+}
+
+function parseStepDocNumber(filePath: string): number | null {
+  const match = path.basename(filePath).match(/^(?<prefix>\d+)-.+\.md$/);
+  if (!match?.groups?.prefix) {
+    return null;
+  }
+  return Number.parseInt(match.groups.prefix, 10);
+}
+
+function findPlaceholderWarnings(text: string, filePath: string, placeholders: string[]): string[] {
+  return placeholders
+    .filter((placeholder) => text.includes(placeholder))
+    .map((placeholder) => `${filePath}: placeholder text was not replaced: ${placeholder}`);
 }
 
 export function sectionStartLine(text: string, sectionName: string): number {
@@ -504,6 +542,28 @@ export async function readRoadmapStatus(target: string): Promise<RoadmapStatus> 
   };
 }
 
+export function validateExecmapAuthoring(filePath: string, text: string, items: StepItem[]): ValidationResult {
+  const errors = findPlaceholderWarnings(text, filePath, EXECMAP_PLACEHOLDERS);
+  const warnings: string[] = [];
+
+  for (const item of items) {
+    if (!item.href) {
+      continue;
+    }
+    const stepPath = path.resolve(path.dirname(filePath), item.href);
+    const prefix = parseStepDocNumber(stepPath);
+    if (prefix === null) {
+      warnings.push(`${stepPath}: step doc filename should start with a numeric prefix that matches execution order`);
+      continue;
+    }
+    if (prefix !== item.position) {
+      warnings.push(`${stepPath}: step doc filename prefix ${prefix} does not match execution-map position ${item.position}`);
+    }
+  }
+
+  return { errors, warnings };
+}
+
 export function renderExecmap(stepNames: string[]): string {
   const lines = [
     "# Execution Map",
@@ -572,13 +632,30 @@ export function renderStep(stepName: string): string {
   ].join("\n");
 }
 
-export async function validateStepDoc(filePath: string): Promise<{ errors: string[]; warnings: string[] }> {
+export async function validateStepDoc(
+  filePath: string,
+  expectedStep?: StepItem,
+): Promise<ValidationResult> {
   const text = await readText(filePath);
   const { order, sections } = parseSections(text);
   const errors = requireSections(filePath, order, sections, STEP_SECTIONS);
+  errors.push(...findPlaceholderWarnings(text, filePath, STEP_PLACEHOLDERS));
   const warnings: string[] = [];
   if (!text.includes("[Back to Execution Map](./EXECMAP.md)")) {
     warnings.push(`${filePath}: missing backlink to EXECMAP.md`);
+  }
+  if (expectedStep) {
+    const titleLine = text.split(/\r?\n/, 1)[0] ?? "";
+    if (titleLine !== `# ${expectedStep.label}`) {
+      errors.push(`${filePath}: step doc title must match execution-map item '${expectedStep.label}'`);
+    }
+
+    const prefix = parseStepDocNumber(filePath);
+    if (prefix === null) {
+      warnings.push(`${filePath}: step doc filename should start with a numeric prefix that matches execution order`);
+    } else if (prefix !== expectedStep.position) {
+      warnings.push(`${filePath}: step doc filename prefix ${prefix} does not match execution-map position ${expectedStep.position}`);
+    }
   }
   return { errors, warnings };
 }

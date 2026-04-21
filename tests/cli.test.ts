@@ -304,7 +304,7 @@ describe("execmap cli", () => {
     expect(nextResult.stdout.trim()).toBe("Define key contracts or boundaries");
   });
 
-  test("check resolves active plan from repo root", async () => {
+  test("check fails on an untouched active scaffold from repo root", async () => {
     const tmp = await mkdtemp(path.join(os.tmpdir(), "execmap-"));
     TEMP_DIRS.push(tmp);
 
@@ -315,8 +315,8 @@ describe("execmap cli", () => {
     const proc = await runCli(["check"], tmp);
     const result = await collectOutput(proc);
 
-    expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain("OK: plans/alpha-launch/EXECMAP.md");
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("placeholder text was not replaced");
   });
 
   test("stepdoc creates and links a step doc by index", async () => {
@@ -529,5 +529,162 @@ describe("execmap cli", () => {
 
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain("linked step doc does not exist");
+  });
+
+  test("check fails when execmap still contains template placeholder text", async () => {
+    const tmp = await mkdtemp(path.join(os.tmpdir(), "execmap-"));
+    TEMP_DIRS.push(tmp);
+
+    const initProc = await runCli(["init", "Placeholder Map"], tmp);
+    const initResult = await collectOutput(initProc);
+    expect(initResult.exitCode).toBe(0);
+
+    const proc = await runCli(["check", "plans/placeholder-map"], tmp);
+    const result = await collectOutput(proc);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("placeholder text was not replaced");
+    expect(result.stderr).toContain("Describe the initiative in one sentence.");
+  });
+
+  test("check fails when a linked step doc title does not match the execution-map item", async () => {
+    const tmp = await mkdtemp(path.join(os.tmpdir(), "execmap-"));
+    TEMP_DIRS.push(tmp);
+
+    const initProc = await runCli(["init", "Alpha Launch"], tmp);
+    const initResult = await collectOutput(initProc);
+    expect(initResult.exitCode).toBe(0);
+
+    const stepdocProc = await runCli(["stepdoc", "plans/alpha-launch", "1"], tmp);
+    const stepdocResult = await collectOutput(stepdocProc);
+    expect(stepdocResult.exitCode).toBe(0);
+
+    await writeFile(
+      path.join(tmp, "plans", "alpha-launch", "01-define-scope.md"),
+      [
+        "# Different Title",
+        "",
+        "[Back to Execution Map](./EXECMAP.md)",
+        "",
+        "## Goal",
+        "",
+        "Ship the right thing.",
+        "",
+        "## Tasks",
+        "",
+        "- Do the work.",
+        "",
+        "## Constraints",
+        "",
+        "- Stay aligned.",
+        "",
+        "## Exit Criteria",
+        "",
+        "- Title is fixed.",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    await writeFile(
+      path.join(tmp, "plans", "alpha-launch", "EXECMAP.md"),
+      [
+        "# Execution Map",
+        "",
+        "## Goal",
+        "",
+        "Ship Alpha Launch.",
+        "",
+        "## Guardrails",
+        "",
+        "- Keep scope bounded.",
+        "- Do not widen the release.",
+        "- Avoid placeholder residue.",
+        "",
+        "## Execution Map",
+        "",
+        "- [ ] [Define scope](./01-define-scope.md)",
+        "- [ ] Define key contracts or boundaries",
+        "",
+        "## Done When",
+        "",
+        "- Alpha Launch scope is defined.",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const proc = await runCli(["check", "plans/alpha-launch"], tmp);
+    const result = await collectOutput(proc);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("step doc title must match execution-map item 'Define scope'");
+  });
+
+  test("check warns on step-doc filename drift", async () => {
+    const tmp = await mkdtemp(path.join(os.tmpdir(), "execmap-"));
+    TEMP_DIRS.push(tmp);
+
+    const planDir = path.join(tmp, "plans", "alpha-launch");
+    await mkdir(planDir, { recursive: true });
+    await writeFile(
+      path.join(planDir, "EXECMAP.md"),
+      [
+        "# Execution Map",
+        "",
+        "## Goal",
+        "",
+        "Ship Alpha Launch.",
+        "",
+        "## Guardrails",
+        "",
+        "- Keep scope bounded.",
+        "- Do not widen the release.",
+        "- Avoid placeholder residue.",
+        "",
+        "## Execution Map",
+        "",
+        "- [ ] [Define scope](./notes.md)",
+        "",
+        "## Done When",
+        "",
+        "- Alpha Launch scope is defined.",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    await writeFile(
+      path.join(planDir, "notes.md"),
+      [
+        "# Define scope",
+        "",
+        "[Back to Execution Map](./EXECMAP.md)",
+        "",
+        "## Goal",
+        "",
+        "Ship the right thing.",
+        "",
+        "## Tasks",
+        "",
+        "- Do the work.",
+        "",
+        "## Constraints",
+        "",
+        "- Stay aligned.",
+        "",
+        "## Exit Criteria",
+        "",
+        "- Scope is clear.",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const proc = await runCli(["check", planDir], tmp);
+    const result = await collectOutput(proc);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("step doc filename should start with a numeric prefix that matches execution order");
+    expect(result.stdout).toContain("step doc filename should use a numeric prefix and slug shape");
   });
 });

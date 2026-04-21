@@ -1,4 +1,4 @@
-# Define The Install Contract
+# Define the install contract
 
 [Back to Execution Map](./EXECMAP.md)
 

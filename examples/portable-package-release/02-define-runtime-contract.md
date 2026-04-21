@@ -1,4 +1,4 @@
-# Define The Runtime Contract
+# Define the runtime contract
 
 [Back to Execution Map](./EXECMAP.md)
 
