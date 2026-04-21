@@ -129,7 +129,7 @@ Keep out of scope:
 - cross-repo planning policies
 
 ### `0.8`: Small Editing Helpers
-Status: active
+Status: completed
 Execmap: `plans/0.8/EXECMAP.md`
 
 Goal: add one more bounded authoring helper only if it clearly reduces
