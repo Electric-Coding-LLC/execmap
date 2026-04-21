@@ -113,23 +113,25 @@ execution maps.
 ## Roadmap
 
 If a repo wants a roadmap, keep it separate from the active `execmap` step
-state, but it may still carry minimal release-level lifecycle state.
+state, but it may still carry minimal version-level lifecycle state.
 
-- Use a roadmap for release order, release scope, and minimal release status.
+- Use a roadmap for version order, version scope, and minimal version status.
 - Do not put roadmap entries in `PLAN.md`.
 - Do not pre-create `plans/<version>/EXECMAP.md` files only to represent future
   ideas.
-- If the roadmap carries status, keep it release-level only, such as
-  `planned`, `active`, `shipped`, or `blocked`.
+- If the roadmap carries status, keep it version-level only, such as
+  `planned`, `active`, `completed`, or `blocked`.
 - Keep detailed execution progress in the promoted `EXECMAP.md`, not in the
   roadmap.
 - When a roadmap item becomes real work, promote it into `plans/<version>/`
   and point `PLAN.md` at that initiative.
+- Treat roadmap completion as internal delivery completion. Public package
+  release and publication stay separate.
 
 ## In This Repo
 
 - [CHANGELOG.md](./CHANGELOG.md): shipped package history
-- [docs/roadmap.md](./docs/roadmap.md): release order, lifecycle, and non-goals
+- [docs/roadmap.md](./docs/roadmap.md): version order, lifecycle, and non-goals
 - [docs/spec.md](./docs/spec.md): canonical system definition
 - [docs/release.md](./docs/release.md): generic publication runbook
 - [templates/PLAN.md](./templates/PLAN.md): root plan index template
@@ -163,7 +165,9 @@ execmap init "portable package release"
 5. Use `execmap status` to inspect the current plan state, `execmap next` to
    identify the current step, and `execmap done` when that step is actually
    complete.
-6. Use `execmap activate` or `execmap close` when the repo's active plan
+6. If the repo keeps a roadmap, use `execmap roadmap` to inspect the current
+   roadmap version alongside the active plan without merging the two.
+7. Use `execmap activate` or `execmap close` when the repo's active plan
    changes.
 
 ## CLI
@@ -177,6 +181,7 @@ bun install
 bun run check
 bun run src/cli.ts init "portable package release"
 bun run src/cli.ts status
+bun run src/cli.ts roadmap
 bun run src/cli.ts stepdoc plans/portable-package-release 2
 bun run src/cli.ts next plans/portable-package-release
 bun run src/cli.ts done plans/portable-package-release
@@ -190,6 +195,7 @@ Commands:
 - `init`: scaffold a new initiative folder with an `EXECMAP.md` and default plain-text steps
 - `next`: print the next unchecked step from an execution map
 - `status`: print the current active plan or explicit target plus the next actionable step
+- `roadmap`: print the current roadmap version and the repo's active plan from repo root
 - `done`: mark the first unchecked step complete in an execution map
 - `stepdoc`: create and link a step doc for one existing execution-map item
 - `activate`: point `PLAN.md` at an existing execution map

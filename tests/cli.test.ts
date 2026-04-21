@@ -52,6 +52,17 @@ function renderPlan(activeLine = "- None", completedLines: string[] = ["- None"]
   ].join("\n");
 }
 
+function renderRoadmap(versions: string[]) {
+  return [
+    "# Example Roadmap",
+    "",
+    "## Near-Term Roadmap",
+    "",
+    ...versions,
+    "",
+  ].join("\n");
+}
+
 afterEach(async () => {
   await Promise.all(
     TEMP_DIRS.splice(0).map(async (dir) => {
@@ -144,6 +155,100 @@ describe("execmap cli", () => {
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout.trim()).toBe("Active Plan: None");
+  });
+
+  test("roadmap reports the first non-completed version alongside the active plan", async () => {
+    const tmp = await mkdtemp(path.join(os.tmpdir(), "execmap-"));
+    TEMP_DIRS.push(tmp);
+    await mkdir(path.join(tmp, "docs"), { recursive: true });
+    await mkdir(path.join(tmp, "plans", "0.6"), { recursive: true });
+    await writeFile(
+      path.join(tmp, "docs", "roadmap.md"),
+      renderRoadmap([
+        "### `0.5`: Plan Visibility",
+        "Status: completed",
+        "Execmap: `plans/0.5/EXECMAP.md`",
+        "",
+        "Goal: Already completed.",
+        "",
+        "### `0.6`: Roadmap Integration",
+        "Status: active",
+        "Execmap: `plans/0.6/EXECMAP.md`",
+        "",
+        "Goal: Integrate roadmap context",
+        "without turning it into execution state.",
+      ]),
+      "utf8",
+    );
+    await writeFile(
+      path.join(tmp, "PLAN.md"),
+      renderPlan("- [0.6](./plans/0.6/EXECMAP.md)", ["- [0.5](./plans/0.5/EXECMAP.md)"]),
+      "utf8",
+    );
+    await writeFile(
+      path.join(tmp, "plans", "0.6", "EXECMAP.md"),
+      [
+        "# Execution Map",
+        "",
+        "## Goal",
+        "",
+        "Test roadmap helper.",
+        "",
+        "## Guardrails",
+        "",
+        "- Keep it read-only.",
+        "",
+        "## Execution Map",
+        "",
+        "- [ ] Add roadmap helper",
+        "",
+        "## Done When",
+        "",
+        "- Repo can report roadmap context.",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const proc = await runCli(["roadmap"], tmp);
+    const result = await collectOutput(proc);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("Roadmap: docs/roadmap.md");
+    expect(result.stdout).toContain("Current Version: 0.6");
+    expect(result.stdout).toContain("Version Status: active");
+    expect(result.stdout).toContain(
+      "Goal: Integrate roadmap context without turning it into execution state.",
+    );
+    expect(result.stdout).toContain("Execmap: plans/0.6/EXECMAP.md");
+    expect(result.stdout).toContain("Active Plan: 0.6");
+    expect(result.stdout).toContain("Active Execmap: plans/0.6/EXECMAP.md");
+  });
+
+  test("roadmap reports completion when all roadmap versions are completed", async () => {
+    const tmp = await mkdtemp(path.join(os.tmpdir(), "execmap-"));
+    TEMP_DIRS.push(tmp);
+    await mkdir(path.join(tmp, "docs"), { recursive: true });
+    await writeFile(
+      path.join(tmp, "docs", "roadmap.md"),
+      renderRoadmap([
+        "### `0.5`: Plan Visibility",
+        "Status: completed",
+        "Execmap: `plans/0.5/EXECMAP.md`",
+        "",
+        "Goal: Already completed.",
+      ]),
+      "utf8",
+    );
+    await writeFile(path.join(tmp, "PLAN.md"), renderPlan(), "utf8");
+
+    const proc = await runCli(["roadmap"], tmp);
+    const result = await collectOutput(proc);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("Current Version: None");
+    expect(result.stdout).toContain("State: complete");
+    expect(result.stdout).toContain("Active Plan: None");
   });
 
   test("status accepts an explicit execmap target", async () => {

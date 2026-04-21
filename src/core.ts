@@ -13,9 +13,13 @@ export const DEFAULT_STEPS = [
 ];
 
 const HEADING_RE = /^## (?<title>.+)$/;
+const ROADMAP_VERSION_RE = /^### `(?<label>[^`]+)`: (?<title>.+)$/;
 const CHECKBOX_RE = /^- \[(?<mark>[ xX])\] (?<body>.+)$/;
 const LIST_ITEM_RE = /^- (?<body>.+)$/;
 const LINK_RE = /^\[(?<label>[^\]]+)\]\((?<href>[^)]+)\)$/;
+const ROADMAP_STATUS_RE = /^Status: (?<status>planned|active|completed|shipped|blocked)$/;
+const ROADMAP_EXECMAP_RE = /^Execmap: `(?<href>[^`]+)`$/;
+const ROADMAP_GOAL_RE = /^Goal: (?<goal>.+)$/;
 
 export type SectionMap = Map<string, string[]>;
 
@@ -43,6 +47,24 @@ export type PlanStatus = {
   execmapPath: string | null;
   nextStepLabel: string | null;
   complete: boolean;
+};
+
+export type RoadmapVersionStatus = "planned" | "active" | "completed" | "shipped" | "blocked";
+
+export type RoadmapVersion = {
+  label: string;
+  title: string;
+  status: RoadmapVersionStatus | null;
+  goal: string | null;
+  execmapHref: string | null;
+  headingLineNo: number;
+};
+
+export type RoadmapStatus = {
+  roadmapPath: string;
+  currentVersion: RoadmapVersion | null;
+  activePlanLabel: string | null;
+  activeExecmapPath: string | null;
 };
 
 export function slugifyStep(value: string): string {
@@ -298,6 +320,16 @@ export async function findPlan(target: string): Promise<string | null> {
   return path.basename(targetPath) === "PLAN.md" ? targetPath : null;
 }
 
+export async function findRoadmap(target: string): Promise<string | null> {
+  const targetPath = path.resolve(target);
+  const targetStats = await stat(targetPath).catch(() => null);
+  if (targetStats?.isDirectory()) {
+    const roadmapPath = path.join(targetPath, "docs", "roadmap.md");
+    return (await exists(roadmapPath)) ? roadmapPath : null;
+  }
+  return path.basename(targetPath).toLowerCase() === "roadmap.md" ? targetPath : null;
+}
+
 export function createPlanEntry(execmapPath: string, planPath: string): PlanEntry {
   return {
     label: path.basename(path.dirname(execmapPath)),
@@ -367,6 +399,108 @@ export async function readPlanStatus(target: string): Promise<PlanStatus> {
     execmapPath,
     nextStepLabel: nextItem?.label ?? null,
     complete: nextItem === null,
+  };
+}
+
+export function parseRoadmapVersions(text: string): RoadmapVersion[] {
+  const versions: RoadmapVersion[] = [];
+  const lines = text.split(/\r?\n/);
+  let current: RoadmapVersion | null = null;
+  let collectingGoal = false;
+
+  for (const [index, line] of lines.entries()) {
+    const versionMatch = line.match(ROADMAP_VERSION_RE);
+    if (versionMatch?.groups?.label && versionMatch.groups.title) {
+      if (current) {
+        versions.push(current);
+      }
+      current = {
+        label: versionMatch.groups.label,
+        title: versionMatch.groups.title,
+        status: null,
+        goal: null,
+        execmapHref: null,
+        headingLineNo: index + 1,
+      };
+      collectingGoal = false;
+      continue;
+    }
+
+    if (!current) {
+      continue;
+    }
+
+    if (collectingGoal) {
+      if (!line.trim()) {
+        collectingGoal = false;
+        continue;
+      }
+      current.goal = current.goal ? `${current.goal} ${line.trim()}` : line.trim();
+      continue;
+    }
+
+    const statusMatch = line.match(ROADMAP_STATUS_RE);
+    if (statusMatch?.groups?.status) {
+      current.status = statusMatch.groups.status as RoadmapVersionStatus;
+      continue;
+    }
+
+    const execmapMatch = line.match(ROADMAP_EXECMAP_RE);
+    if (execmapMatch?.groups?.href) {
+      current.execmapHref = execmapMatch.groups.href;
+      continue;
+    }
+
+    const goalMatch = line.match(ROADMAP_GOAL_RE);
+    if (goalMatch?.groups?.goal) {
+      current.goal = goalMatch.groups.goal.trim();
+      collectingGoal = true;
+    }
+  }
+
+  if (current) {
+    versions.push(current);
+  }
+
+  return versions;
+}
+
+export async function readRoadmapStatus(target: string): Promise<RoadmapStatus> {
+  const roadmapPath = await findRoadmap(target);
+  if (!roadmapPath) {
+    throw new Error(`roadmap target must be a directory with docs/roadmap.md or roadmap.md: ${target}`);
+  }
+
+  const roadmapText = await readText(roadmapPath);
+  const versions = parseRoadmapVersions(roadmapText);
+  if (versions.length === 0) {
+    throw new Error(`${roadmapPath}: no roadmap versions found`);
+  }
+
+  for (const version of versions) {
+    if (!version.status) {
+      throw new Error(`${roadmapPath}:${version.headingLineNo}: roadmap version is missing Status`);
+    }
+  }
+
+  const currentVersion =
+    versions.find((version) => version.status !== "completed" && version.status !== "shipped") ?? null;
+  const repoRoot = path.resolve(path.dirname(roadmapPath), "..");
+  const planPath = await findPlan(repoRoot);
+  let activePlanLabel: string | null = null;
+  let activeExecmapPath: string | null = null;
+
+  if (planPath) {
+    const { active } = await readPlan(planPath);
+    activePlanLabel = active?.label ?? null;
+    activeExecmapPath = active ? path.resolve(path.dirname(planPath), active.href) : null;
+  }
+
+  return {
+    roadmapPath,
+    currentVersion,
+    activePlanLabel,
+    activeExecmapPath,
   };
 }
 

@@ -1,6 +1,6 @@
 ---
 name: execmap
-description: Plan non-trivial bounded work with one EXECMAP.md, optional step docs, and ordered execution from the next unchecked item. Use when a feature, refactor, migration, release, or cleanup pass should be mapped before implementation starts.
+description: Plan non-trivial bounded work with one EXECMAP.md, optional step docs, and ordered execution from the next unchecked item. Use when a feature, refactor, migration, versioned roadmap slice, or cleanup pass should be mapped before implementation starts.
 ---
 
 # Execmap
@@ -13,7 +13,8 @@ ordered plan without drifting.
 ## Use When
 
 - The user explicitly asks for `execmap` or an execution map.
-- The task is a non-trivial feature, refactor, migration, release, or cleanup
+- The task is a non-trivial feature, refactor, migration, versioned roadmap
+  slice, or cleanup
   pass.
 - The work is large enough that sequencing and scope control matter.
 
@@ -27,7 +28,7 @@ Do not use `execmap` for trivial one-step edits.
   and status.
 - `PLAN.md` can point to one active `plans/<initiative>/EXECMAP.md` or state
   `None` when there is no active initiative.
-- A repo may also keep a roadmap for release order and minimal release
+- A repo may also keep a roadmap for version order and minimal version
   lifecycle state.
 - Step docs are optional and exist only for steps that need more definition.
 - The next unchecked item in `Execution Map` is the default next action.
@@ -61,13 +62,15 @@ Required step-doc sections:
   to `None` when the repo has no active initiative.
 - Keep `PLAN.md` as an index only. Do not duplicate checkbox state there.
 
-4. Use a roadmap only at release level when needed.
+4. Use a roadmap only at version level when needed.
 - If the repo has a roadmap, keep it separate from `PLAN.md`.
-- A roadmap may carry minimal release-level state such as `planned`, `active`,
-  `shipped`, or `blocked`.
+- A roadmap may carry minimal version-level state such as `planned`, `active`,
+  `completed`, or `blocked`.
 - Do not put step-level checkbox state in the roadmap.
-- When a roadmap release becomes active work, promote it into
+- When a roadmap version becomes active work, promote it into
   `plans/<version>/EXECMAP.md` and point `PLAN.md` at that initiative.
+- Treat roadmap completion as internal delivery completion. Public release or
+  publish steps stay separate unless the user explicitly asks for them.
 
 5. Create the top-level map before implementation.
 - Write the goal in one sentence.
@@ -84,6 +87,9 @@ Required step-doc sections:
 - Treat the first unchecked item as the current step.
 - Use `execmap status ...` when you need one read-only view of the current plan
   state from repo root or an explicit target.
+- Use `execmap roadmap ...` when the repo has a roadmap and you need the
+  current version context alongside the active plan without merging their
+  status.
 - Use `execmap done ...` when the current step is actually complete, if that
   helper is available in the repo or installed package.
 - Use `execmap activate ...` or `execmap close` when the repo's active plan
@@ -104,7 +110,7 @@ scaffolding and validation.
 Common paths:
 
 - `execmap init ...`, `execmap next ...`, `execmap status ...`,
-  `execmap done ...`,
+  `execmap roadmap ...`, `execmap done ...`,
   `execmap activate ...`, `execmap close`, `execmap check ...` if installed as
   a command or Bun package
 - `bun run src/cli.ts ...` in a repo that vendors the Bun helper
@@ -131,7 +137,7 @@ When introducing `execmap` into a repo or task:
 - Create the map instead of only describing it abstractly.
 - Create or update `PLAN.md` so the repo state is discoverable from the repo
   root.
-- If the repo uses a roadmap, keep its release-level state aligned with the
+- If the repo uses a roadmap, keep its version-level state aligned with the
   promoted initiative and the current `PLAN.md` entry.
 - If the user asked for execution, start from the first unchecked item after
   the map is in place.
