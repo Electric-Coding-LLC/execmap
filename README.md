@@ -183,6 +183,7 @@ bun run src/cli.ts init "portable package release"
 bun run src/cli.ts status
 bun run src/cli.ts roadmap
 bun run src/cli.ts stepdoc plans/portable-package-release 2
+bun run src/cli.ts rename plans/portable-package-release 2 "Define the packaged runtime contract"
 bun run src/cli.ts next plans/portable-package-release
 bun run src/cli.ts done plans/portable-package-release
 bun run src/cli.ts activate plans/portable-package-release
@@ -198,6 +199,7 @@ Commands:
 - `roadmap`: print the current roadmap version and the repo's active plan from repo root
 - `done`: mark the first unchecked step complete in an execution map
 - `stepdoc`: create and link a step doc for one existing execution-map item
+- `rename`: rewrite one execution-map item label and keep a linked step doc aligned
 - `activate`: point `PLAN.md` at an existing execution map
 - `close`: clear the active plan and archive it under completed plans
 - `check`: validate required sections, step links, and step docs

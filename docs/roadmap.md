@@ -109,7 +109,7 @@ Keep out of scope:
 - supporting multiple simultaneous active initiatives
 
 ### `0.7`: Stronger Authoring Checks
-Status: active
+Status: completed
 Execmap: `plans/0.7/EXECMAP.md`
 
 Goal: catch more real authoring mistakes before execution starts.
@@ -129,7 +129,8 @@ Keep out of scope:
 - cross-repo planning policies
 
 ### `0.8`: Small Editing Helpers
-Status: planned
+Status: active
+Execmap: `plans/0.8/EXECMAP.md`
 
 Goal: add one more bounded authoring helper only if it clearly reduces
 hand-editing without turning `execmap` into a generic markdown editor.

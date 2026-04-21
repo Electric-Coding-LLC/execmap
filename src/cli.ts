@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { mkdir, readdir, writeFile } from "node:fs/promises";
+import { mkdir, readdir, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   DEFAULT_STEPS,
@@ -23,7 +23,9 @@ import {
   resolvePlanPath,
   sectionStartLine,
   setStepItemChecked,
+  setStepDocTitle,
   setStepItemLink,
+  setStepItemLabel,
   slugifyInitiative,
   slugifyStep,
   validateExecmapAuthoring,
@@ -197,6 +199,66 @@ async function commandStepdoc(args: string[]): Promise<number> {
   await writeFile(stepPath, renderStep(item.label), "utf8");
   await writeFile(execmapPath, nextExecmap, "utf8");
   console.log(`Step doc: ${path.relative(process.cwd(), stepPath) || stepPath}`);
+  return 0;
+}
+
+async function commandRename(args: string[]): Promise<number> {
+  const usage = "usage: execmap rename <target> <step> <new-label>";
+  const [target, selector, ...labelParts] = args;
+  const nextLabel = labelParts.join(" ").trim();
+  if (!target || !selector || !nextLabel) {
+    throw new Error(usage);
+  }
+
+  const execmapPath = await findExecmap(target);
+  const text = await readText(execmapPath);
+  const { order, sections } = parseSections(text);
+  const errors = requireSections(execmapPath, order, sections, MAP_SECTIONS);
+  if (errors.length > 0) {
+    console.error(`error: ${errors[0]}`);
+    return 1;
+  }
+
+  const executionLines = sections.get("Execution Map") ?? [];
+  const items = parseExecutionItems(executionLines, sectionStartLine(text, "Execution Map"));
+  if (items.length === 0) {
+    console.error(`error: ${execmapPath}: execution map must contain at least one checkbox item`);
+    return 1;
+  }
+
+  let item: StepItem | null;
+  try {
+    item = selectStepItem(items, selector);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`error: ${message}`);
+    return 1;
+  }
+  if (!item) {
+    console.error(`error: ${execmapPath}: step not found: ${selector}`);
+    return 1;
+  }
+
+  let nextHref = item.href;
+  if (item.href) {
+    const currentStepPath = path.resolve(path.dirname(execmapPath), item.href);
+    const nextFileName = `${String(item.position).padStart(2, "0")}-${slugifyStep(nextLabel)}.md`;
+    const nextStepPath = path.join(path.dirname(execmapPath), nextFileName);
+    const stepText = await readText(currentStepPath);
+    await writeFile(currentStepPath, setStepDocTitle(stepText, nextLabel), "utf8");
+
+    if (currentStepPath !== nextStepPath) {
+      if (await exists(nextStepPath)) {
+        console.error(`error: destination step doc already exists: ${nextStepPath}`);
+        return 1;
+      }
+      await rename(currentStepPath, nextStepPath);
+    }
+    nextHref = `./${nextFileName}`;
+  }
+
+  await writeFile(execmapPath, setStepItemLabel(text, item, nextLabel, nextHref), "utf8");
+  console.log(`Renamed: ${item.label} -> ${nextLabel}`);
   return 0;
 }
 
@@ -442,7 +504,7 @@ async function commandCheck(targetArg?: string): Promise<number> {
 }
 
 function printUsage(): void {
-  console.error("usage: execmap <init|next|status|roadmap|done|stepdoc|activate|close|check> [args]");
+  console.error("usage: execmap <init|next|status|roadmap|done|stepdoc|rename|activate|close|check> [args]");
 }
 
 export async function main(argv = process.argv.slice(2)): Promise<number> {
@@ -469,6 +531,9 @@ export async function main(argv = process.argv.slice(2)): Promise<number> {
   }
   if (command === "stepdoc") {
     return commandStepdoc(rest);
+  }
+  if (command === "rename") {
+    return commandRename(rest);
   }
   if (command === "activate") {
     return commandActivate(rest);

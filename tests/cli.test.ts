@@ -375,6 +375,80 @@ describe("execmap cli", () => {
     expect(result.stderr).toContain("step already links to a step doc");
   });
 
+  test("rename rewrites a plain execution-map item by index", async () => {
+    const tmp = await mkdtemp(path.join(os.tmpdir(), "execmap-"));
+    TEMP_DIRS.push(tmp);
+
+    const initProc = await runCli(["init", "Alpha Launch"], tmp);
+    const initResult = await collectOutput(initProc);
+    expect(initResult.exitCode).toBe(0);
+
+    const proc = await runCli(["rename", "plans/alpha-launch", "2", "Define API contract"], tmp);
+    const result = await collectOutput(proc);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout.trim()).toBe("Renamed: Define key contracts or boundaries -> Define API contract");
+    expect(await Bun.file(path.join(tmp, "plans/alpha-launch/EXECMAP.md")).text()).toContain(
+      "- [ ] Define API contract",
+    );
+  });
+
+  test("rename keeps a linked step doc title and filename aligned", async () => {
+    const tmp = await mkdtemp(path.join(os.tmpdir(), "execmap-"));
+    TEMP_DIRS.push(tmp);
+
+    const initProc = await runCli(["init", "Alpha Launch"], tmp);
+    const initResult = await collectOutput(initProc);
+    expect(initResult.exitCode).toBe(0);
+
+    const stepdocProc = await runCli(["stepdoc", "plans/alpha-launch", "1"], tmp);
+    const stepdocResult = await collectOutput(stepdocProc);
+    expect(stepdocResult.exitCode).toBe(0);
+
+    const execmapPath = path.join(tmp, "plans", "alpha-launch", "EXECMAP.md");
+    await writeFile(
+      execmapPath,
+      [
+        "# Execution Map",
+        "",
+        "## Goal",
+        "",
+        "Ship Alpha Launch.",
+        "",
+        "## Guardrails",
+        "",
+        "- Keep scope bounded.",
+        "- Do not widen the release.",
+        "- Avoid placeholder residue.",
+        "",
+        "## Execution Map",
+        "",
+        "- [ ] [Define scope](./01-define-scope.md)",
+        "- [ ] Define key contracts or boundaries",
+        "",
+        "## Done When",
+        "",
+        "- Alpha Launch scope is defined.",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const proc = await runCli(["rename", "plans/alpha-launch", "Define scope", "Define release scope"], tmp);
+    const result = await collectOutput(proc);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout.trim()).toBe("Renamed: Define scope -> Define release scope");
+    expect(await Bun.file(execmapPath).text()).toContain(
+      "- [ ] [Define release scope](./01-define-release-scope.md)",
+    );
+    expect(await Bun.file(path.join(tmp, "plans", "alpha-launch", "01-define-release-scope.md")).exists()).toBe(true);
+    expect(await Bun.file(path.join(tmp, "plans", "alpha-launch", "01-define-release-scope.md")).text()).toContain(
+      "# Define release scope",
+    );
+    expect(await Bun.file(path.join(tmp, "plans", "alpha-launch", "01-define-scope.md")).exists()).toBe(false);
+  });
+
   test("next fails clearly when repo root has no active plan", async () => {
     const tmp = await mkdtemp(path.join(os.tmpdir(), "execmap-"));
     TEMP_DIRS.push(tmp);
