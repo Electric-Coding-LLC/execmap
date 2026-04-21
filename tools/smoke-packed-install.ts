@@ -42,6 +42,36 @@ async function run(command: string[], cwd = ROOT): Promise<CommandResult> {
   return { stdout, stderr };
 }
 
+async function runExpectingFailure(
+  command: string[],
+  expected: string,
+  cwd = ROOT,
+): Promise<void> {
+  const proc = Bun.spawn(command, {
+    cwd,
+    stdout: "pipe",
+    stderr: "pipe",
+    env: process.env,
+  });
+
+  const [stdout, stderr, exitCode] = await Promise.all([
+    new Response(getPipe(proc.stdout, "stdout")).text(),
+    new Response(getPipe(proc.stderr, "stderr")).text(),
+    proc.exited,
+  ]);
+
+  if (exitCode === 0) {
+    throw new Error(`command unexpectedly succeeded: ${command.join(" ")}`);
+  }
+
+  const rendered = [stdout.trim(), stderr.trim()].filter(Boolean).join("\n");
+  if (!rendered.includes(expected)) {
+    throw new Error(
+      [`command failed without expected output: ${command.join(" ")}`, rendered].filter(Boolean).join("\n"),
+    );
+  }
+}
+
 async function main(): Promise<void> {
   const packDir = await mkdtemp(path.join(os.tmpdir(), "execmap-pack-"));
   const installDir = await mkdtemp(path.join(os.tmpdir(), "execmap-install-"));
@@ -61,6 +91,39 @@ async function main(): Promise<void> {
 
     await run(["bun", "add", tarballPath], installDir);
     await run(["./node_modules/.bin/execmap", "init", "Smoke Plan"], installDir);
+    await runExpectingFailure(
+      ["./node_modules/.bin/execmap", "check", "plans/smoke-plan"],
+      "placeholder text was not replaced",
+      installDir,
+    );
+    await writeFile(
+      path.join(installDir, "plans", "smoke-plan", "EXECMAP.md"),
+      [
+        "# Execution Map",
+        "",
+        "## Goal",
+        "",
+        "Ship the installed smoke plan.",
+        "",
+        "## Guardrails",
+        "",
+        "- Keep the smoke flow minimal.",
+        "- Do not depend on local source files.",
+        "- Avoid placeholder residue.",
+        "",
+        "## Execution Map",
+        "",
+        "- [ ] Define the installed smoke contract",
+        "- [ ] Verify the installed CLI",
+        "",
+        "## Done When",
+        "",
+        "- The installed CLI validates a real execmap.",
+        "- The installed CLI can advance the next step.",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
     await run(["./node_modules/.bin/execmap", "check", "plans/smoke-plan"], installDir);
     await run(["./node_modules/.bin/execmap", "done", "plans/smoke-plan"], installDir);
     await run(["./node_modules/.bin/execmap", "next", "plans/smoke-plan"], installDir);

@@ -1,4 +1,4 @@
-# Finalize The Release
+# Finalize the release
 
 [Back to Execution Map](./EXECMAP.md)
 

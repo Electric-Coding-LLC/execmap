@@ -86,7 +86,7 @@ Keep out of scope:
 - issue tracker or git integration
 
 ### `0.6`: Roadmap Integration
-Status: active
+Status: completed
 Execmap: `plans/0.6/EXECMAP.md`
 
 Goal: integrate a repo roadmap into the `execmap` workflow without turning the
@@ -109,7 +109,8 @@ Keep out of scope:
 - supporting multiple simultaneous active initiatives
 
 ### `0.7`: Stronger Authoring Checks
-Status: planned
+Status: active
+Execmap: `plans/0.7/EXECMAP.md`
 
 Goal: catch more real authoring mistakes before execution starts.
 

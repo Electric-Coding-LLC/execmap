@@ -1,4 +1,4 @@
-# Verify Packaged Install Behavior
+# Verify packaged install behavior
 
 [Back to Execution Map](./EXECMAP.md)
 

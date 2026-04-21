@@ -1,4 +1,4 @@
-# Define Scope
+# Define scope
 
 [Back to Execution Map](./EXECMAP.md)
 
