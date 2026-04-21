@@ -698,3 +698,34 @@ export function setStepItemLink(text: string, item: StepItem, href: string): str
   lines[index] = `- [${item.checked ? "x" : " "}] [${item.label}](${href})`;
   return lines.join(newline);
 }
+
+export function setStepItemLabel(text: string, item: StepItem, label: string, href = item.href): string {
+  const newline = text.includes("\r\n") ? "\r\n" : "\n";
+  const lines = text.split(/\r?\n/);
+  const index = item.lineNo - 1;
+  const currentLine = lines[index];
+  if (currentLine === undefined) {
+    throw new Error(`step line is out of range: ${item.lineNo}`);
+  }
+
+  const match = currentLine.match(CHECKBOX_RE);
+  if (!match?.groups?.body) {
+    throw new Error(`step line is not a checkbox item: ${item.lineNo}`);
+  }
+
+  lines[index] =
+    href
+      ? `- [${item.checked ? "x" : " "}] [${label}](${href})`
+      : `- [${item.checked ? "x" : " "}] ${label}`;
+  return lines.join(newline);
+}
+
+export function setStepDocTitle(text: string, label: string): string {
+  const newline = text.includes("\r\n") ? "\r\n" : "\n";
+  const lines = text.split(/\r?\n/);
+  if (lines.length === 0 || !lines[0]?.startsWith("# ")) {
+    throw new Error("step doc must start with a level-1 heading");
+  }
+  lines[0] = `# ${label}`;
+  return lines.join(newline);
+}

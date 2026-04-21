@@ -110,7 +110,7 @@ scaffolding and validation.
 Common paths:
 
 - `execmap init ...`, `execmap next ...`, `execmap status ...`,
-  `execmap roadmap ...`, `execmap done ...`,
+  `execmap roadmap ...`, `execmap done ...`, `execmap rename ...`,
   `execmap activate ...`, `execmap close`, `execmap check ...` if installed as
   a command or Bun package
 - `bun run src/cli.ts ...` in a repo that vendors the Bun helper
